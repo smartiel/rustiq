@@ -12,23 +12,58 @@ pub enum Metric {
     DEPTH,
 }
 
+impl Metric {
+    /// Attempts to build a Metric from a string
+    pub fn from_string(name: &str) -> Result<Self, String> {
+        match name {
+            "depth" => Result::Ok(Self::DEPTH),
+            "count" => Result::Ok(Self::COUNT),
+            &_ => Result::Err(format!("Unknown metric name `{}`", name)),
+        }
+    }
+}
+
 const ALL_CHUNKS: [[Option<Gate>; 3]; 18] = [
     [None, None, Some(Gate::CNOT(0, 1))],
     [None, None, Some(Gate::CNOT(1, 0))],
-    [None, Some(Gate::S(1)), Some(Gate::CNOT(0, 1))],
-    [None, Some(Gate::S(1)), Some(Gate::CNOT(1, 0))],
+    [None, Some(Gate::SqrtX(1)), Some(Gate::CNOT(0, 1))],
+    [None, Some(Gate::SqrtX(1)), Some(Gate::CNOT(1, 0))],
     [None, Some(Gate::H(1)), Some(Gate::CNOT(0, 1))],
     [None, Some(Gate::H(1)), Some(Gate::CNOT(1, 0))],
-    [Some(Gate::S(0)), None, Some(Gate::CNOT(0, 1))],
-    [Some(Gate::S(0)), None, Some(Gate::CNOT(1, 0))],
-    [Some(Gate::S(0)), Some(Gate::S(1)), Some(Gate::CNOT(0, 1))],
-    [Some(Gate::S(0)), Some(Gate::S(1)), Some(Gate::CNOT(1, 0))],
-    [Some(Gate::S(0)), Some(Gate::H(1)), Some(Gate::CNOT(0, 1))],
-    [Some(Gate::S(0)), Some(Gate::H(1)), Some(Gate::CNOT(1, 0))],
+    [Some(Gate::SqrtX(0)), None, Some(Gate::CNOT(0, 1))],
+    [Some(Gate::SqrtX(0)), None, Some(Gate::CNOT(1, 0))],
+    [
+        Some(Gate::SqrtX(0)),
+        Some(Gate::SqrtX(1)),
+        Some(Gate::CNOT(0, 1)),
+    ],
+    [
+        Some(Gate::SqrtX(0)),
+        Some(Gate::SqrtX(1)),
+        Some(Gate::CNOT(1, 0)),
+    ],
+    [
+        Some(Gate::SqrtX(0)),
+        Some(Gate::H(1)),
+        Some(Gate::CNOT(0, 1)),
+    ],
+    [
+        Some(Gate::SqrtX(0)),
+        Some(Gate::H(1)),
+        Some(Gate::CNOT(1, 0)),
+    ],
     [Some(Gate::H(0)), None, Some(Gate::CNOT(0, 1))],
     [Some(Gate::H(0)), None, Some(Gate::CNOT(1, 0))],
-    [Some(Gate::H(0)), Some(Gate::S(1)), Some(Gate::CNOT(0, 1))],
-    [Some(Gate::H(0)), Some(Gate::S(1)), Some(Gate::CNOT(1, 0))],
+    [
+        Some(Gate::H(0)),
+        Some(Gate::SqrtX(1)),
+        Some(Gate::CNOT(0, 1)),
+    ],
+    [
+        Some(Gate::H(0)),
+        Some(Gate::SqrtX(1)),
+        Some(Gate::CNOT(1, 0)),
+    ],
     [Some(Gate::H(0)), Some(Gate::H(1)), Some(Gate::CNOT(0, 1))],
     [Some(Gate::H(0)), Some(Gate::H(1)), Some(Gate::CNOT(1, 0))],
 ];
@@ -49,6 +84,13 @@ fn chunk_to_circuit(
                     circuit_piece.gates.push(Gate::S(qbit2));
                 }
             }
+            Some(Gate::SqrtX(i)) => {
+                if *i == 0 {
+                    circuit_piece.gates.push(Gate::SqrtX(qbit1));
+                } else {
+                    circuit_piece.gates.push(Gate::SqrtX(qbit2));
+                }
+            }
             Some(Gate::H(i)) => {
                 if *i == 0 {
                     circuit_piece.gates.push(Gate::H(qbit1));
@@ -63,7 +105,7 @@ fn chunk_to_circuit(
                     circuit_piece.gates.push(Gate::CNOT(qbit2, qbit1));
                 }
             }
-            _ => {}
+            None => {}
         }
     }
     return circuit_piece;
@@ -93,6 +135,13 @@ fn conjugate_with_chunk(
                         bucket.h(qbit2);
                     }
                 }
+                Some(Gate::SqrtX(i)) => {
+                    if *i == 0 {
+                        bucket.sqrt_x(qbit1);
+                    } else {
+                        bucket.sqrt_x(qbit2);
+                    }
+                }
                 Some(Gate::CNOT(i, _)) => {
                     if *i == 0 {
                         bucket.cnot(qbit1, qbit2);
@@ -111,6 +160,13 @@ fn conjugate_with_chunk(
                         bucket.s(qbit1);
                     } else {
                         bucket.s(qbit2);
+                    }
+                }
+                Some(Gate::SqrtX(i)) => {
+                    if *i == 0 {
+                        bucket.sqrt_x(qbit1);
+                    } else {
+                        bucket.sqrt_x(qbit2);
                     }
                 }
                 Some(Gate::H(i)) => {
@@ -172,7 +228,7 @@ fn build_graph(
         for qbit2 in (qbit1 + 1)..bucket.n {
             // computing the initial identity count
             let init_id_count = bucket.count_id(qbit1) + bucket.count_id(qbit2);
-            let mut max_score = -1;
+            let mut max_score = 0;
             let mut best_chunk: [Option<Gate>; 3] = [None; 3];
             for chunk in ALL_CHUNKS {
                 // conjugating with the chunk
@@ -184,9 +240,13 @@ fn build_graph(
                     best_chunk = chunk.clone();
                 }
                 best_chunks.insert((qbit1, qbit2), best_chunk);
+                // undoing the conjugation
                 conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, true);
             }
-            graph.add_edge(NodeIndex::new(qbit1), NodeIndex::new(qbit2), max_score);
+            // If there exists a chunk that improves the score, we add an edge labeled with the score in the graph
+            if max_score > 0 {
+                graph.add_edge(NodeIndex::new(qbit1), NodeIndex::new(qbit2), max_score);
+            }
         }
     }
     return (graph, best_chunks);
@@ -196,7 +256,6 @@ fn single_synthesis_step_depth(bucket: &mut PauliSet) -> Circuit {
     let (graph, best_chunks) = build_graph(bucket);
     let matching = maximum_matching(&graph);
     let mut circuit_piece = Circuit::new(bucket.n);
-
     for (qbit1, qbit2) in matching.edges() {
         let chunk = best_chunks[&(qbit1.index(), qbit2.index())];
         circuit_piece.extend_with(&chunk_to_circuit(
@@ -257,6 +316,9 @@ mod greedy_synthesis_tests {
         }
         for gate in circuit.gates.iter() {
             match gate {
+                Gate::SqrtX(i) => {
+                    bucket.sqrt_x(*i);
+                }
                 Gate::S(i) => {
                     bucket.s(*i);
                 }
@@ -273,6 +335,8 @@ mod greedy_synthesis_tests {
                 }
             }
         }
+        println!("Synthesized {} operators", hit_map.len());
+        println!("{:?}", bucket);
         return hit_map.len() == input.len();
     }
 
@@ -280,6 +344,7 @@ mod greedy_synthesis_tests {
     fn count_synthesis() {
         let input = ["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
         let circuit = pauli_network_synthesis(&input, &Metric::COUNT);
+        println!("{circuit:?}");
         assert!(check_circuit(&input, &circuit))
     }
     #[test]
