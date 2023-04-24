@@ -180,6 +180,7 @@ impl PauliSet {
         } else {
             (left.get_mut(j).unwrap(), right.get(0).unwrap())
         };
+
         for (v1, v2) in source_row.iter().zip(target_row.iter_mut()) {
             *v2 ^= *v1;
         }
@@ -195,6 +196,10 @@ impl PauliSet {
     /// Conjugate the set of rotations via a S gate
     pub fn s(&mut self, i: usize) {
         self.row_op(i, i + self.n);
+    }
+    /// Conjugate the set of rotations via a SQRT_X gate
+    pub fn sqrt_x(&mut self, i: usize) {
+        self.row_op(i + self.n, i);
     }
     /// Conjugate the set of rotations via a CNOT gate
     pub fn cnot(&mut self, i: usize, j: usize) {
