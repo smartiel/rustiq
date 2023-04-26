@@ -3,7 +3,18 @@ pub enum Gate {
     CNOT(usize, usize),
     H(usize),
     S(usize),
+    Sd(usize),
     SqrtX(usize),
+    SqrtXd(usize),
+}
+impl Gate {
+    pub fn dagger(&self) -> Self {
+        match self {
+            Self::S(i) => Self::Sd(*i),
+            Self::SqrtX(i) => Self::SqrtXd(*i),
+            _ => *self,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -50,5 +61,13 @@ impl Circuit {
             }
         }
         return *depths.iter().max().unwrap();
+    }
+    /// Returns the inverse of the circuit
+    pub fn dagger(&self) -> Self {
+        let new_gates = self.gates.iter().rev().map(|gate| gate.dagger()).collect();
+        return Self {
+            nqbits: self.nqbits,
+            gates: new_gates,
+        };
     }
 }

@@ -1,16 +1,18 @@
+use super::circuit::{Circuit, Gate};
+use itertools::izip;
 use std::cmp::max;
-
 const WIDTH: usize = 64;
+
 fn get_stride(index: usize) -> usize {
     return index / WIDTH;
 }
+
 fn get_offset(index: usize) -> usize {
     return index % WIDTH;
 }
+
 /// A set of Pauli operators (module global phase)
 /// Conjugation by Clifford gates are vectorized
-/// Warning:
-///     Phases are not tracked ! (because I am lazy)
 #[derive(Clone, Debug)]
 pub struct PauliSet {
     pub n: usize,
@@ -20,6 +22,7 @@ pub struct PauliSet {
     /// The X and Z parts of the Pauli operators (in row major)
     /// The X part spans the first `n` rows and the Z part spans the last `n` rows
     data_array: Vec<Vec<u64>>,
+    phases: Vec<u64>,
 }
 
 impl PauliSet {
@@ -31,13 +34,18 @@ impl PauliSet {
             noperators: 0,
             start_offset: 0,
             data_array: vec![Vec::new(); 2 * n],
+            phases: Vec::new(),
         }
     }
     // Construction from a list of operators
-    pub fn from_slice(n: usize, data: &[String]) -> Self {
+    pub fn from_slice(data: &[String]) -> Self {
+        if data.len() == 0 {
+            return Self::new(0);
+        }
+        let n = data.len();
         let mut pset = Self::new(n);
         for piece in data {
-            pset.insert(piece);
+            pset.insert(piece, false);
         }
         return pset;
     }
@@ -46,28 +54,32 @@ impl PauliSet {
         return self.noperators;
     }
     /// Inserts a new Pauli operator in the set and returns its index
-    pub fn insert(&mut self, axis: &str) -> usize {
-        let stride_index = get_stride(self.noperators + self.start_offset);
+    pub fn insert(&mut self, axis: &str, phase: bool) -> usize {
+        let stride = get_stride(self.noperators + self.start_offset);
         let offset = get_offset(self.noperators + self.start_offset);
-        if stride_index == self.nstrides {
+        if stride == self.nstrides {
             self.nstrides += 1;
             self.data_array.iter_mut().for_each(|row| row.push(0));
+            self.phases.push(0);
         }
+        // Setting the phase
+        if phase {
+            self.phases[stride] |= 1 << offset;
+        }
+        // Setting the operator
         for (index, pauli) in axis.chars().enumerate() {
             match pauli {
                 'Z' => {
-                    self.data_array[index + self.n][stride_index] =
-                        self.data_array[index + self.n][stride_index] | (1 << offset)
+                    self.data_array[index + self.n][stride] =
+                        self.data_array[index + self.n][stride] | (1 << offset)
                 }
                 'X' => {
-                    self.data_array[index][stride_index] =
-                        self.data_array[index][stride_index] | (1 << offset)
+                    self.data_array[index][stride] = self.data_array[index][stride] | (1 << offset)
                 }
                 'Y' => {
-                    self.data_array[index][stride_index] =
-                        self.data_array[index][stride_index] | (1 << offset);
-                    self.data_array[index + self.n][stride_index] =
-                        self.data_array[index + self.n][stride_index] | (1 << offset)
+                    self.data_array[index][stride] = self.data_array[index][stride] | (1 << offset);
+                    self.data_array[index + self.n][stride] =
+                        self.data_array[index + self.n][stride] | (1 << offset)
                 }
                 _ => {}
             }
@@ -77,12 +89,16 @@ impl PauliSet {
     }
 
     /// Inserts a new Pauli operator described as a vector of bool in the set and returns its index
-    pub fn insert_vec_bool(&mut self, axis: &Vec<bool>) -> usize {
+    pub fn insert_vec_bool(&mut self, axis: &Vec<bool>, phase: bool) -> usize {
         let stride = get_stride(self.noperators + self.start_offset);
         let offset = get_offset(self.noperators + self.start_offset);
         if stride == self.nstrides {
             self.nstrides += 1;
             self.data_array.iter_mut().for_each(|row| row.push(0));
+            self.phases.push(0);
+        }
+        if phase {
+            self.phases[stride] |= 1 << offset;
         }
         for (index, value) in axis.iter().enumerate() {
             if *value {
@@ -94,10 +110,11 @@ impl PauliSet {
     }
     /// Clears the data of the Pauli set
     pub fn clear(&mut self) {
-        for i in 0..2 * self.n {
-            for j in 0..self.nstrides {
+        for j in 0..self.nstrides {
+            for i in 0..2 * self.n {
                 self.data_array[i][j] = 0;
             }
+            self.phases[j] = 0;
         }
         self.noperators = 0;
         self.start_offset = 0;
@@ -109,11 +126,12 @@ impl PauliSet {
         for i in 0..2 * self.n {
             self.data_array[i][stride] &= !(1 << offset);
         }
+        self.phases[stride] &= !(1 << offset);
         self.start_offset += 1;
         self.noperators -= 1;
     }
     /// Get the operator at index `operator_index`
-    pub fn get(&self, operator_index: usize) -> String {
+    pub fn get(&self, operator_index: usize) -> (bool, String) {
         let operator_index = operator_index + self.start_offset;
         let mut output = String::new();
         let stride = get_stride(operator_index);
@@ -137,11 +155,11 @@ impl PauliSet {
                 }
             }
         }
-        output
+        (((self.phases[stride] >> offset) & 1 != 0), output)
     }
 
     /// Get the operator at index `operator_index`
-    pub fn get_as_vec_bool(&self, operator_index: usize) -> Vec<bool> {
+    pub fn get_as_vec_bool(&self, operator_index: usize) -> (bool, Vec<bool>) {
         let operator_index = operator_index + self.start_offset;
         let mut output = Vec::new();
         let stride = get_stride(operator_index);
@@ -149,7 +167,20 @@ impl PauliSet {
         for i in 0..2 * self.n {
             output.push(((self.data_array[i][stride] >> offset) & 1) != 0);
         }
-        output
+        (((self.phases[stride] >> offset) & 1 != 0), output)
+    }
+
+    /// Checks if two operators in the set commute
+    pub fn commute(&self, i: usize, j: usize) -> bool {
+        let (_, vec1) = self.get_as_vec_bool(i);
+        let (_, vec2) = self.get_as_vec_bool(j);
+        let mut count_diff = 0;
+        for k in 0..self.n {
+            if (vec1[k] & vec2[k + self.n]) ^ (vec1[k + self.n] & vec2[k]) {
+                count_diff += 1;
+            }
+        }
+        return (count_diff % 2) == 0;
     }
 
     /// Returns the support size of the operator (i.e. the number of non-I Pauli term in the operator)
@@ -185,6 +216,31 @@ impl PauliSet {
             *v2 ^= *v1;
         }
     }
+
+    /// Offset the phases by the logical bitwise and of two target rows
+    fn update_phase_and(&mut self, i: usize, j: usize) {
+        for (v1, v2, phase) in izip!(
+            self.data_array[i].iter(),
+            self.data_array[j].iter(),
+            self.phases.iter_mut()
+        ) {
+            *phase ^= *v1 & *v2;
+        }
+    }
+
+    /// Same thing as `update_phase_and` but computes the and of 4 rows instead
+    fn update_phase_and_many(&mut self, i: usize, j: usize, k: usize, l: usize) {
+        for (v1, v2, v3, v4, phase) in izip!(
+            self.data_array[i].iter(),
+            self.data_array[j].iter(),
+            self.data_array[k].iter(),
+            self.data_array[l].iter(),
+            self.phases.iter_mut()
+        ) {
+            *phase ^= *v1 & *v2 & *v3 & *v4;
+        }
+    }
+
     /*
        Gate conjugation
     */
@@ -192,19 +248,49 @@ impl PauliSet {
     /// Conjugate the set of rotations via a H gate
     pub fn h(&mut self, i: usize) {
         self.data_array.swap(i, i + self.n);
+        self.update_phase_and(i, i + self.n);
     }
     /// Conjugate the set of rotations via a S gate
     pub fn s(&mut self, i: usize) {
+        self.update_phase_and(i, i + self.n);
         self.row_op(i, i + self.n);
+    }
+    /// Conjugate the set of rotations via a S dagger gate
+    pub fn sd(&mut self, i: usize) {
+        self.row_op(i, i + self.n);
+        self.update_phase_and(i, i + self.n);
     }
     /// Conjugate the set of rotations via a SQRT_X gate
     pub fn sqrt_x(&mut self, i: usize) {
         self.row_op(i + self.n, i);
+        self.update_phase_and(i, i + self.n);
+    }
+    /// Conjugate the set of rotations via a SQRT_X dagger gate
+    pub fn sqrt_xd(&mut self, i: usize) {
+        self.update_phase_and(i, i + self.n);
+        self.row_op(i + self.n, i);
     }
     /// Conjugate the set of rotations via a CNOT gate
     pub fn cnot(&mut self, i: usize, j: usize) {
+        self.update_phase_and_many(i, j, i + self.n, j + self.n);
         self.row_op(j + self.n, i + self.n);
         self.row_op(i, j);
+        self.update_phase_and_many(i, j, i + self.n, j + self.n);
+    }
+    pub fn conjugate_with_gate(&mut self, gate: &Gate) {
+        match gate {
+            Gate::CNOT(i, j) => self.cnot(*i, *j),
+            Gate::H(i) => self.h(*i),
+            Gate::S(i) => self.s(*i),
+            Gate::Sd(i) => self.sd(*i),
+            Gate::SqrtX(i) => self.sqrt_x(*i),
+            Gate::SqrtXd(i) => self.sqrt_xd(*i),
+        }
+    }
+    pub fn conjugate_with_circuit(&mut self, circuit: &Circuit) {
+        for gate in circuit.gates.iter() {
+            self.conjugate_with_gate(gate);
+        }
     }
 
     /*
@@ -228,17 +314,20 @@ impl PauliSet {
     /// Sorts the set by support size
     pub fn support_size_sort(&mut self) {
         // We first build the "transpose" of data_array (cheaper this way)
-        let mut transposed: Vec<Vec<bool>> = (0..self.noperators)
+        let mut transposed: Vec<(bool, Vec<bool>)> = (0..self.noperators)
             .map(|i| self.get_as_vec_bool(i))
             .collect();
-        transposed.sort_by_key(|vec| {
+        // We sort the operators by support size
+        transposed.sort_by_key(|(_, vec)| {
             (0..self.n)
                 .map(|i| if vec[i] | vec[i + self.n] { 1 } else { 0 })
                 .sum::<i32>()
         });
+        // We clear the set
         self.clear();
-        for axis in transposed {
-            self.insert_vec_bool(&axis);
+        // And insert everybody back in place
+        for (phase, axis) in transposed {
+            self.insert_vec_bool(&axis, phase);
         }
     }
 }
@@ -259,7 +348,7 @@ mod pauli_set_tests {
     #[test]
     fn insertion() {
         let mut pset = PauliSet::new(4);
-        pset.insert(&"XYZI");
+        pset.insert(&"XYZI", false);
         assert_eq!(pset.data_array.len(), 8);
         assert_eq!(pset.n, 4);
         assert_eq!(pset.nstrides, 1);
@@ -278,59 +367,97 @@ mod pauli_set_tests {
     #[test]
     fn get() {
         let mut pset = PauliSet::new(4);
-        pset.insert(&"XYZI");
-        assert_eq!(pset.get(0), "XYZI");
+        pset.insert(&"XYZI", false);
+        assert_eq!(pset.get(0), (false, "XYZI".to_owned()));
     }
 
     #[test]
     fn h_test() {
         let mut pset = PauliSet::new(1);
-        pset.insert(&"X");
-        pset.insert(&"Z");
-        pset.insert(&"Y");
-        pset.insert(&"I");
+        pset.insert(&"X", false);
+        pset.insert(&"Z", false);
+        pset.insert(&"Y", false);
+        pset.insert(&"I", false);
 
         pset.h(0);
 
-        assert_eq!(pset.get(0), "Z");
-        assert_eq!(pset.get(1), "X");
-        assert_eq!(pset.get(2), "Y");
-        assert_eq!(pset.get(3), "I");
+        assert_eq!(pset.get(0), (false, "Z".to_owned()));
+        assert_eq!(pset.get(1), (false, "X".to_owned()));
+        assert_eq!(pset.get(2), (true, "Y".to_owned()));
+        assert_eq!(pset.get(3), (false, "I".to_owned()));
     }
 
     #[test]
     fn s_test() {
         let mut pset = PauliSet::new(1);
-        pset.insert(&"X");
-        pset.insert(&"Z");
-        pset.insert(&"Y");
-        pset.insert(&"I");
+        pset.insert(&"X", false);
+        pset.insert(&"Z", false);
+        pset.insert(&"Y", false);
+        pset.insert(&"I", false);
 
         pset.s(0);
 
-        assert_eq!(pset.get(0), "Y");
-        assert_eq!(pset.get(1), "Z");
-        assert_eq!(pset.get(2), "X");
-        assert_eq!(pset.get(3), "I");
+        assert_eq!(pset.get(0), (false, "Y".to_owned()));
+        assert_eq!(pset.get(1), (false, "Z".to_owned()));
+        assert_eq!(pset.get(2), (true, "X".to_owned()));
+        assert_eq!(pset.get(3), (false, "I".to_owned()));
     }
+
+    #[test]
+    fn sqrt_x_test() {
+        let mut pset = PauliSet::new(1);
+        pset.insert(&"X", false);
+        pset.insert(&"Z", false);
+        pset.insert(&"Y", false);
+        pset.insert(&"I", false);
+
+        pset.sqrt_x(0);
+
+        assert_eq!(pset.get(0), (false, "X".to_owned()));
+        assert_eq!(pset.get(1), (true, "Y".to_owned()));
+        assert_eq!(pset.get(2), (false, "Z".to_owned()));
+        assert_eq!(pset.get(3), (false, "I".to_owned()));
+    }
+    // TODO:write this test :'(
     #[test]
     fn cnot_test() {
-        let mut pset = PauliSet::new(2);
-        pset.insert(&"XX");
-        pset.insert(&"ZZ");
-
-        pset.cnot(0, 1);
-
-        assert_eq!(pset.get(0), "XI");
-        assert_eq!(pset.get(1), "IZ");
+        const INPUTS: [&str; 16] = [
+            "II", "IX", "IY", "IZ", "XI", "XX", "XY", "XZ", "YI", "YX", "YY", "YZ", "ZI", "ZX",
+            "ZY", "ZZ",
+        ];
+        const OUTPUTS: [(bool, &str); 16] = [
+            (false, "II"),
+            (false, "IX"),
+            (false, "ZY"),
+            (false, "ZZ"),
+            (false, "XX"),
+            (false, "XI"),
+            (false, "YZ"),
+            (true, "YY"),
+            (false, "YX"),
+            (false, "YI"),
+            (true, "XZ"),
+            (false, "XY"),
+            (false, "ZI"),
+            (false, "ZX"),
+            (false, "IY"),
+            (false, "IZ"),
+        ];
+        for (ins, (phase, outs)) in INPUTS.iter().zip(OUTPUTS.iter()) {
+            let mut pset = PauliSet::new(2);
+            pset.insert(ins, false);
+            pset.cnot(0, 1);
+            assert_eq!(pset.get(0), (*phase, (*outs).to_owned()));
+        }
     }
+
     #[test]
     fn support_size_test() {
         let mut pset = PauliSet::new(4);
-        pset.insert(&"XYIZ");
-        pset.insert(&"XYII");
-        pset.insert(&"IYIZ");
-        pset.insert(&"IIII");
+        pset.insert(&"XYIZ", false);
+        pset.insert(&"XYII", false);
+        pset.insert(&"IYIZ", false);
+        pset.insert(&"IIII", false);
         assert_eq!(pset.support_size(0), 3);
         assert_eq!(pset.support_size(1), 2);
         assert_eq!(pset.support_size(2), 2);
@@ -339,11 +466,11 @@ mod pauli_set_tests {
     #[test]
     fn count_id() {
         let mut pset = PauliSet::new(4);
-        pset.insert(&"IIII");
-        pset.insert(&"XIII");
-        pset.insert(&"XXII");
-        pset.insert(&"XXXI");
-        pset.insert(&"XXXX");
+        pset.insert(&"IIII", false);
+        pset.insert(&"XIII", false);
+        pset.insert(&"XXII", false);
+        pset.insert(&"XXXI", false);
+        pset.insert(&"XXXX", false);
         assert_eq!(pset.count_id(0), 1);
         assert_eq!(pset.count_id(1), 2);
         assert_eq!(pset.count_id(2), 3);
@@ -352,27 +479,42 @@ mod pauli_set_tests {
     #[test]
     fn sort_test() {
         let mut pset = PauliSet::new(4);
-        pset.insert(&"IIII");
-        pset.insert(&"XXII");
-        pset.insert(&"XXXX");
-        pset.insert(&"XIII");
-        pset.insert(&"XXXI");
+        pset.insert(&"IIII", false);
+        pset.insert(&"XXII", false);
+        pset.insert(&"XXXX", false);
+        pset.insert(&"XIII", false);
+        pset.insert(&"XXXI", false);
         pset.support_size_sort();
-        assert_eq!(pset.get(0), "IIII");
-        assert_eq!(pset.get(1), "XIII");
-        assert_eq!(pset.get(2), "XXII");
-        assert_eq!(pset.get(3), "XXXI");
-        assert_eq!(pset.get(4), "XXXX");
+        assert_eq!(pset.get(0), (false, "IIII".to_owned()));
+        assert_eq!(pset.get(1), (false, "XIII".to_owned()));
+        assert_eq!(pset.get(2), (false, "XXII".to_owned()));
+        assert_eq!(pset.get(3), (false, "XXXI".to_owned()));
+        assert_eq!(pset.get(4), (false, "XXXX".to_owned()));
     }
     #[test]
     fn pop_test() {
         let mut pset = PauliSet::new(1);
-        pset.insert(&"I");
-        pset.insert(&"X");
+        pset.insert(&"I", false);
+        pset.insert(&"X", false);
         assert_eq!(pset.noperators, 2);
         pset.pop();
         assert_eq!(pset.noperators, 1);
         assert_eq!(pset.start_offset, 1);
-        assert_eq!(pset.get(0), "X");
+        assert_eq!(pset.get(0), (false, "X".to_owned()));
+    }
+    #[test]
+    fn commute_test() {
+        let mut pset = PauliSet::new(2);
+        pset.insert(&"ZI", false);
+        pset.insert(&"XI", false);
+        pset.insert(&"ZZ", false);
+        pset.insert(&"XX", false);
+        pset.insert(&"YY", false);
+        assert!(pset.commute(0, 2));
+        assert!(!pset.commute(0, 1));
+        assert!(pset.commute(2, 3));
+        assert!(pset.commute(2, 4));
+        assert!(pset.commute(3, 4));
+        assert!(pset.commute(1, 3));
     }
 }
