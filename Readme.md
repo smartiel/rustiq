@@ -1,3 +1,5 @@
+[![Rust](https://github.com/smartiel/qrust/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/smartiel/qrust/actions/workflows/rust.yml)
+
 # A quantum circuit compiler in Rust
 
 ## Building the project
