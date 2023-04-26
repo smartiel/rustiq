@@ -84,11 +84,25 @@ fn chunk_to_circuit(
                     circuit_piece.gates.push(Gate::S(qbit2));
                 }
             }
+            Some(Gate::Sd(i)) => {
+                if *i == 0 {
+                    circuit_piece.gates.push(Gate::Sd(qbit1));
+                } else {
+                    circuit_piece.gates.push(Gate::Sd(qbit2));
+                }
+            }
             Some(Gate::SqrtX(i)) => {
                 if *i == 0 {
                     circuit_piece.gates.push(Gate::SqrtX(qbit1));
                 } else {
                     circuit_piece.gates.push(Gate::SqrtX(qbit2));
+                }
+            }
+            Some(Gate::SqrtXd(i)) => {
+                if *i == 0 {
+                    circuit_piece.gates.push(Gate::SqrtXd(qbit1));
+                } else {
+                    circuit_piece.gates.push(Gate::SqrtXd(qbit2));
                 }
             }
             Some(Gate::H(i)) => {
@@ -270,7 +284,7 @@ fn single_synthesis_step_depth(bucket: &mut PauliSet) -> Circuit {
     return circuit_piece;
 }
 
-fn single_synthesis_step(bucket: &mut PauliSet, metric: &Metric) -> Circuit {
+pub fn single_synthesis_step(bucket: &mut PauliSet, metric: &Metric) -> Circuit {
     return match metric {
         Metric::COUNT => single_synthesis_step_count(bucket),
         Metric::DEPTH => single_synthesis_step_depth(bucket),
@@ -286,7 +300,7 @@ pub fn pauli_network_synthesis(axes: &[String], metric: &Metric) -> Circuit {
     let mut bucket = PauliSet::new(nqbits);
     let mut output = Circuit::new(nqbits);
     for axis in axes {
-        bucket.insert(axis);
+        bucket.insert(axis, false);
     }
     loop {
         bucket.support_size_sort();
@@ -308,7 +322,7 @@ mod greedy_synthesis_tests {
     use std::collections::HashSet;
     fn check_circuit(input: &[String], circuit: &Circuit) -> bool {
         let mut hit_map: HashSet<usize> = HashSet::new();
-        let mut bucket = PauliSet::from_slice(circuit.nqbits, input);
+        let mut bucket = PauliSet::from_slice(input);
         for i in 0..bucket.len() {
             if bucket.support_size(i) == 1 {
                 hit_map.insert(i);
@@ -319,8 +333,14 @@ mod greedy_synthesis_tests {
                 Gate::SqrtX(i) => {
                     bucket.sqrt_x(*i);
                 }
+                Gate::SqrtXd(i) => {
+                    bucket.sqrt_xd(*i);
+                }
                 Gate::S(i) => {
                     bucket.s(*i);
+                }
+                Gate::Sd(i) => {
+                    bucket.sd(*i);
                 }
                 Gate::H(i) => {
                     bucket.h(*i);
