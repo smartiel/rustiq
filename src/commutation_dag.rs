@@ -3,6 +3,7 @@ use super::circuit::Circuit;
 use super::greedy_pauli_network::{single_synthesis_step, Metric};
 use super::pauli_set::PauliSet;
 use petgraph::prelude::*;
+use pyo3::prelude::*;
 
 pub type Dag = DiGraph<usize, ()>;
 
@@ -56,10 +57,12 @@ impl PauliDag {
             front_layer,
         }
     }
+
     /// Constructs a PauliDag from a slice of axes
     pub fn from_slice(axes: &[String]) -> Self {
         Self::from_pauli_set(PauliSet::from_slice(axes))
     }
+
     /// Performs a single synthesis step
     fn single_step_synthesis(&mut self, metric: &Metric) -> Circuit {
         let circuit = single_synthesis_step(&mut self.front_layer, metric);
@@ -86,11 +89,12 @@ impl PauliDag {
 }
 
 /// A greedy synthesis method that preserves the sequence of operator up to swap of commuting operators.
-pub fn pauli_network_synthesis_no_permutation(axes: &[String], metric: &Metric) -> Circuit {
-    let mut dag = PauliDag::from_slice(axes);
+#[pyfunction]
+pub fn pauli_network_synthesis_no_permutation(axes: Vec<String>, metric: Metric) -> Circuit {
+    let mut dag = PauliDag::from_slice(&axes);
     let mut circuit = Circuit::new(dag.pauli_set.n);
     while dag.dag.node_count() > 0 && dag.front_layer.len() > 0 {
-        let piece = dag.single_step_synthesis(metric);
+        let piece = dag.single_step_synthesis(&metric);
         circuit.extend_with(&piece);
     }
     return circuit;
@@ -101,7 +105,7 @@ mod greedy_synthesis_tests {
     use super::super::circuit::Gate;
     use super::*;
     use std::collections::HashSet;
-    fn check_circuit(input: &[String], circuit: &Circuit) -> bool {
+    fn _check_circuit(input: &[String], circuit: &Circuit) -> bool {
         let mut hit_map: HashSet<usize> = HashSet::new();
         let mut bucket = PauliSet::from_slice(input);
         for i in 0..bucket.len() {

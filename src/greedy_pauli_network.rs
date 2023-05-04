@@ -1,12 +1,12 @@
 use petgraph::algo::maximum_matching;
 use petgraph::prelude::*;
-
+use pyo3::prelude::*;
 use std::collections::HashMap;
 
 use super::circuit::{Circuit, Gate};
 use super::pauli_set::PauliSet;
-
-#[derive(Debug)]
+#[pyclass]
+#[derive(Debug, Clone)]
 pub enum Metric {
     COUNT,
     DEPTH,
@@ -292,7 +292,8 @@ pub fn single_synthesis_step(bucket: &mut PauliSet, metric: &Metric) -> Circuit 
 }
 
 /// Builds a Pauli network for a collection of Pauli operators
-pub fn pauli_network_synthesis(axes: &[String], metric: &Metric) -> Circuit {
+#[pyfunction]
+pub fn pauli_network_synthesis(axes: Vec<String>, metric: Metric) -> Circuit {
     if axes.is_empty() {
         return Circuit::new(0);
     }
@@ -300,7 +301,7 @@ pub fn pauli_network_synthesis(axes: &[String], metric: &Metric) -> Circuit {
     let mut bucket = PauliSet::new(nqbits);
     let mut output = Circuit::new(nqbits);
     for axis in axes {
-        bucket.insert(axis, false);
+        bucket.insert(&axis, false);
     }
     loop {
         bucket.support_size_sort();
@@ -362,15 +363,15 @@ mod greedy_synthesis_tests {
 
     #[test]
     fn count_synthesis() {
-        let input = ["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
-        let circuit = pauli_network_synthesis(&input, &Metric::COUNT);
+        let input = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
+        let circuit = pauli_network_synthesis(input.clone(), Metric::COUNT);
         println!("{circuit:?}");
         assert!(check_circuit(&input, &circuit))
     }
     #[test]
     fn depth_synthesis() {
-        let input = ["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
-        let circuit = pauli_network_synthesis(&input, &Metric::DEPTH);
+        let input = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
+        let circuit = pauli_network_synthesis(input.clone(), Metric::DEPTH);
         assert!(check_circuit(&input, &circuit))
     }
 }
