@@ -1,3 +1,4 @@
+use pyo3::prelude::*;
 #[derive(Debug, Clone, Copy)]
 pub enum Gate {
     CNOT(usize, usize),
@@ -15,8 +16,18 @@ impl Gate {
             _ => *self,
         }
     }
+    pub fn to_vec(&self) -> (String, Vec<usize>) {
+        match self {
+            Gate::CNOT(i, j) => ("CNOT".to_owned(), vec![*i, *j]),
+            Gate::H(i) => ("H".to_owned(), vec![*i]),
+            Gate::S(i) => ("S".to_owned(), vec![*i]),
+            Gate::Sd(i) => ("Sd".to_owned(), vec![*i]),
+            Gate::SqrtX(i) => ("SqrtX".to_owned(), vec![*i]),
+            Gate::SqrtXd(i) => ("SqrtXd".to_owned(), vec![*i]),
+        }
+    }
 }
-
+#[pyclass]
 #[derive(Debug)]
 pub struct Circuit {
     pub nqbits: usize,

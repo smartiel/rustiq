@@ -1,7 +1,7 @@
 extern crate clap;
 use clap::{command, Arg};
-use qrust::commutation_dag::pauli_network_synthesis_no_permutation;
-use qrust::greedy_pauli_network::{pauli_network_synthesis, Metric};
+use rustiq::commutation_dag::pauli_network_synthesis_no_permutation;
+use rustiq::greedy_pauli_network::{pauli_network_synthesis, Metric};
 use std::env;
 use std::fs;
 use std::time::Instant;
@@ -18,7 +18,7 @@ fn load_pauli_set_from_file(file_path: &str) -> Vec<String> {
 fn main() {
     let args = command!()
         .version("0.0.1")
-        .about("Command line interface for qrust")
+        .about("Command line interface for rustiq")
         .arg(
             Arg::new("FILE")
                 .help("A file containing the set of Pauli operators")
@@ -51,9 +51,9 @@ fn main() {
     .expect("Unknown metric");
     let start = Instant::now();
     let result = if args.get_flag("keeporder") {
-        pauli_network_synthesis_no_permutation(&pauli_operators, &metric)
+        pauli_network_synthesis_no_permutation(pauli_operators, metric)
     } else {
-        pauli_network_synthesis(&pauli_operators, &metric)
+        pauli_network_synthesis(pauli_operators, metric)
     };
     let duration = start.elapsed();
     if args.get_flag("onlyinfo") {
@@ -64,9 +64,6 @@ fn main() {
             result.cnot_depth()
         );
     } else {
-        println!("# Input file {file_path}");
-        println!("# Pauli operators: {:?}", pauli_operators);
-        println!("# Using metric: {:?}", metric);
         for gate in result.gates {
             println!("{:?}", gate);
         }

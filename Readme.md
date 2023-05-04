@@ -1,6 +1,6 @@
-[![Rust](https://github.com/smartiel/qrust/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/smartiel/qrust/actions/workflows/rust.yml)
+[![Rust](https://github.com/smartiel/rustiq/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/smartiel/rustiq/actions/workflows/rust.yml)
 
-# A quantum circuit compiler in Rust
+# Rustiq: A quantum circuit compiler in Rust
 
 ## Building the project
 
@@ -16,25 +16,25 @@ The file names are pretty straightforward to parse.
 Once the crate is compiled, you can run the synthesizer as follows:
 
 ```bash
-./target/release/qrust <FILENAME> 
+./target/release/rustiq <FILENAME> 
 ```
 
 By default, the program prints the output circuit. You can simply ask the program for the running time, the CNOT count, and the CNOT depth
 by adding the flag `--onlyinfo` (the circuits might be huge).
 
 ```bash
-./target/release/qrust <FILENAME> --onlyinfo
+./target/release/rustiq <FILENAME> --onlyinfo
 ```
 
 You can switch between the count and depth minimizing algorithms via the `--metric` option:
 
 ```bash
-./target/release/qrust <FILENAME> --onlyinfo --metric=depth
+./target/release/rustiq <FILENAME> --onlyinfo --metric=depth
 ```
 
 or
 
 ```bash
-./target/release/qrust <FILENAME> --onlyinfo --metric=count
+./target/release/rustiq <FILENAME> --onlyinfo --metric=count
 ```
 
