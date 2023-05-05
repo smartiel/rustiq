@@ -1,6 +1,6 @@
 extern crate clap;
 use clap::{command, Arg};
-use rustiq::commutation_dag::pauli_network_synthesis_no_permutation;
+use rustiq::greedy_order_preserving::pauli_network_synthesis_no_permutation;
 use rustiq::greedy_pauli_network::{pauli_network_synthesis, Metric};
 use std::env;
 use std::fs;

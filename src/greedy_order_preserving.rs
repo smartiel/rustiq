@@ -22,11 +22,11 @@ fn build_dag_from_pauli_set(pauli_set: &PauliSet) -> Dag {
     return dag;
 }
 
-fn _get_front_layer(dag: &Dag) -> Vec<usize> {
+/// Computes the list of operators that can be synthesized
+fn _get_front_layer(dag: &Dag) -> Vec<NodeIndex> {
     return dag
         .node_indices()
         .filter(|node| dag.neighbors(*node).collect::<Vec<_>>().len() == 0)
-        .map(|node| node.index())
         .collect();
 }
 
@@ -46,9 +46,10 @@ impl PauliDag {
         let nqbits = pauli_set.n;
         let dag = build_dag_from_pauli_set(&pauli_set);
         let indices_front_layer = _get_front_layer(&dag);
+
         let mut front_layer = PauliSet::new(nqbits);
         for index in indices_front_layer {
-            let (phase, pstring) = pauli_set.get(index);
+            let (phase, pstring) = pauli_set.get(*dag.node_weight(index).unwrap());
             front_layer.insert(&pstring, phase);
         }
         Self {
@@ -63,27 +64,40 @@ impl PauliDag {
         Self::from_pauli_set(PauliSet::from_slice(axes))
     }
 
+    fn update_front_layer(&mut self) {
+        // Popping the trivial operators from the front_layer
+        self.front_layer.clear();
+        // Removing nodes that were synthesized at this round
+        loop {
+            let node_count = self.dag.node_count();
+            self.dag.retain_nodes(|graph, node_index| {
+                if graph.first_edge(node_index, Direction::Outgoing) == None {
+                    return self
+                        .pauli_set
+                        .support_size(*graph.node_weight(node_index).unwrap())
+                        > 1;
+                }
+                return true;
+            });
+            if self.dag.node_count() == node_count {
+                break;
+            }
+        }
+        // Updating the front layer bucket
+        for index in _get_front_layer(&self.dag) {
+            let (phase, pstring) = self.pauli_set.get(*self.dag.node_weight(index).unwrap());
+            self.front_layer.insert(&pstring, phase);
+        }
+    }
+
     /// Performs a single synthesis step
     fn single_step_synthesis(&mut self, metric: &Metric) -> Circuit {
+        self.front_layer.support_size_sort();
         let circuit = single_synthesis_step(&mut self.front_layer, metric);
         // Updating the global set of operators
         self.pauli_set.conjugate_with_circuit(&circuit);
-        // Popping the trivial operators from the front_layer
-        let current_front_layer = _get_front_layer(&self.dag);
-        while self.front_layer.support_size(0) == 1 {
-            let wit = self.front_layer.get(0);
-            self.front_layer.pop();
-            for index in current_front_layer.iter() {
-                if self.pauli_set.get(*index) == wit {
-                    self.dag.remove_node(NodeIndex::new(*index));
-                    break;
-                }
-            }
-        }
-        for index in _get_front_layer(&self.dag) {
-            let (phase, pstring) = self.pauli_set.get(index);
-            self.front_layer.insert(&pstring, phase);
-        }
+        // Updating the front layer
+        self.update_front_layer();
         return circuit;
     }
 }
@@ -93,9 +107,8 @@ impl PauliDag {
 pub fn pauli_network_synthesis_no_permutation(axes: Vec<String>, metric: Metric) -> Circuit {
     let mut dag = PauliDag::from_slice(&axes);
     let mut circuit = Circuit::new(dag.pauli_set.n);
-    while dag.dag.node_count() > 0 && dag.front_layer.len() > 0 {
-        let piece = dag.single_step_synthesis(&metric);
-        circuit.extend_with(&piece);
+    while dag.front_layer.len() > 0 {
+        circuit.extend_with(&dag.single_step_synthesis(&metric));
     }
     return circuit;
 }
@@ -105,7 +118,7 @@ mod greedy_synthesis_tests {
     use super::super::circuit::Gate;
     use super::*;
     use std::collections::HashSet;
-    fn _check_circuit(input: &[String], circuit: &Circuit) -> bool {
+    fn check_circuit(input: &[String], circuit: &Circuit) -> bool {
         let mut hit_map: HashSet<usize> = HashSet::new();
         let mut bucket = PauliSet::from_slice(input);
         for i in 0..bucket.len() {
@@ -143,5 +156,19 @@ mod greedy_synthesis_tests {
         println!("Synthesized {} operators", hit_map.len());
         println!("{:?}", bucket);
         return hit_map.len() == input.len();
+    }
+    #[test]
+    fn count_synthesis() {
+        let input = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
+        let circuit = pauli_network_synthesis_no_permutation(input.clone(), Metric::COUNT);
+        println!("{circuit:?}");
+        assert!(check_circuit(&input, &circuit))
+    }
+    #[test]
+    fn depth_synthesis() {
+        let input = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
+        let circuit = pauli_network_synthesis_no_permutation(input.clone(), Metric::DEPTH);
+        println!("{circuit:?}");
+        assert!(check_circuit(&input, &circuit))
     }
 }

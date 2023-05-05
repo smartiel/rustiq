@@ -42,7 +42,7 @@ impl PauliSet {
         if data.len() == 0 {
             return Self::new(0);
         }
-        let n = data.len();
+        let n = data.first().unwrap().len();
         let mut pset = Self::new(n);
         for piece in data {
             pset.insert(piece, false);
