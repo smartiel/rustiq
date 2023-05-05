@@ -13,6 +13,8 @@ impl Gate {
         match self {
             Self::S(i) => Self::Sd(*i),
             Self::SqrtX(i) => Self::SqrtXd(*i),
+            Self::Sd(i) => Self::S(*i),
+            Self::SqrtXd(i) => Self::SqrtX(*i),
             _ => *self,
         }
     }
