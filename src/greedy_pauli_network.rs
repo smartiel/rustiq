@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use super::circuit::{Circuit, Gate};
 use super::pauli_set::PauliSet;
+
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum Metric {

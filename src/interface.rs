@@ -1,6 +1,7 @@
 use super::circuit::{Circuit, Gate};
 use super::greedy_order_preserving::pauli_network_synthesis_no_permutation;
 use super::greedy_pauli_network::{pauli_network_synthesis, Metric};
+use super::h_opt::diagonalization_network;
 use super::pauli_set::PauliSet;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
@@ -74,6 +75,7 @@ pub fn greedy_pauli_network(
 #[pymodule]
 fn rustiq(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(greedy_pauli_network))?;
+    m.add_wrapped(wrap_pyfunction!(diagonalization_network))?;
     m.add_class::<Metric>()?;
     Ok(())
 }

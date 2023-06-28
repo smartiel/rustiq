@@ -83,4 +83,7 @@ impl Circuit {
             gates: new_gates,
         };
     }
+    pub fn to_vec(&self) -> Vec<(String, Vec<usize>)> {
+        self.gates.iter().map(|gate| gate.to_vec()).collect()
+    }
 }
