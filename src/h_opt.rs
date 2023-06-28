@@ -1,11 +1,8 @@
 use super::circuit::{Circuit, Gate};
-use super::greedy_order_preserving::PauliDag;
 use super::pauli_set::PauliSet;
 use pyo3::prelude::*;
 
-#[pyfunction]
-pub fn diagonalization_network(input: Vec<String>) -> Vec<(Vec<(String, Vec<usize>)>, String)> {
-    let mut pauli_set = PauliSet::from_slice(&input);
+pub fn diagonalization_network_pset(pauli_set: &mut PauliSet) -> Vec<(Circuit, String)> {
     let mut output = Vec::new();
     let mut rotations = Vec::new();
     if pauli_set.len() == 0 {
@@ -31,9 +28,68 @@ pub fn diagonalization_network(input: Vec<String>) -> Vec<(Vec<(String, Vec<usiz
         let (_, axis) = pauli_set.get(i);
         rotations.push(axis);
     }
-    return output.iter().map(|c| c.to_vec()).zip(rotations).collect();
+    return output.into_iter().zip(rotations).collect();
 }
 
-pub fn h_opt(axes: Vec<String>) {
-    let mut dag = PauliDag::from_slice(&axes);
+pub fn h_opt(
+    axes: Vec<String>,
+) -> (
+    Vec<(String, Vec<usize>)>,
+    Vec<(Vec<(String, Vec<usize>)>, String)>,
+) {
+    let reversed_axes: Vec<_> = axes.clone().into_iter().rev().collect();
+    let mut reversed_pset = PauliSet::from_slice(&reversed_axes);
+    let diag_net = diagonalization_network_pset(&mut reversed_pset);
+    let mut diag_net_generators = PauliSet::new(reversed_pset.n);
+
+    for i in 0..reversed_pset.n {
+        let z_pstring = (0..reversed_pset.n)
+            .map(|j| if j == i { "Z" } else { "I" })
+            .collect::<Vec<_>>()
+            .join("");
+        diag_net_generators.insert(&z_pstring, false);
+    }
+
+    for (circuit, _) in diag_net.iter().rev() {
+        diag_net_generators.conjugate_with_circuit(&circuit);
+    }
+    for pauli in axes {
+        diag_net_generators.insert(&pauli, false);
+    }
+    let mut final_diag = diagonalization_network_pset(&mut diag_net_generators);
+
+    let mut first_circuit = Circuit::new(reversed_pset.n);
+    for (circuit, _) in final_diag.drain(..reversed_pset.n) {
+        first_circuit.gates.extend(circuit.gates.into_iter());
+    }
+    if let Some((circuit, _)) = final_diag.get_mut(0) {
+        first_circuit.gates.extend(circuit.gates.drain(..));
+    }
+
+    return (
+        first_circuit.to_vec(),
+        final_diag
+            .into_iter()
+            .map(|(c, s)| (c.to_vec(), s))
+            .collect(),
+    );
+}
+
+#[pyfunction]
+pub fn diagonalization_network(
+    input: Vec<String>,
+    optimal: bool,
+) -> (
+    Vec<(String, Vec<usize>)>,
+    Vec<(Vec<(String, Vec<usize>)>, String)>,
+) {
+    if optimal {
+        return h_opt(input);
+    }
+    let mut pauli_set = PauliSet::from_slice(&input);
+    let output = diagonalization_network_pset(&mut pauli_set);
+    return (
+        Vec::new(),
+        output.into_iter().map(|(c, s)| (c.to_vec(), s)).collect(),
+    );
 }

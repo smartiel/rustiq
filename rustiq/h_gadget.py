@@ -139,12 +139,12 @@ def gadgetize(network):
     )
 
 
-def predict_nbqbits(pauli_sequence):
+def predict_nbqbits(pauli_sequence, optimal=False):
     """
     Predict the total number of qubits required in order
     to implement this sequence while gadgetizing every H gate.
     """
-    network = diagonalization_network(pauli_sequence)
+    init_circuit, network = diagonalization_network(pauli_sequence, optimal)
     nqbits = len(network[0][1])
     predicted_nqbits = nqbits
     for piece, _ in network:
