@@ -70,6 +70,30 @@ def propagate_x_correction(network, start_index, target_qbit, current_mapping):
     return to_flip, correction
 
 
+def simplify_phase_polynomial(phase_polynomial_part, nqbits):
+    phase_poly = []
+    clifford_correction = []
+    for gate in reversed(phase_polynomial_part):
+        # Gate can be:
+        # - a (diagonal) rotation
+        # - a CNOT gate ====> here we need to do a bit of work
+        # - a S gate (commutes trivially with any rotation)
+        # - a CZ gate (commutes trivially with any rotation)
+        if gate[0] == "ROTATION":
+            z_vec = np.zeros((nqbits,), dtype=np.byte)
+            for i, p in enumerate(gate[1]):
+                if p == "Z":
+                    z_vec[i] = 1
+            phase_poly.append(z_vec)
+            continue
+        elif gate[0] == "CNOT":
+            for rotation in phase_poly:
+                rotation[gate[1][0]] ^= rotation[gate[1][1]]
+        clifford_correction.append(gate)
+
+    return phase_poly, list(reversed(clifford_correction))
+
+
 def gadgetize(network):
     nqbits = len(network[0][1])
     mapping = dict(zip(range(nqbits), range(nqbits)))
@@ -79,6 +103,12 @@ def gadgetize(network):
     beginning = []
     phase_polynomial_part = []
     end = []
+    predicted_nqbits = nqbits
+    for piece, _ in network:
+        for gate in piece:
+            if gate[0] == "H":
+                predicted_nqbits += 1
+
     for index, (circuit_piece, rotation) in enumerate(network):
         for gate, qbits in circuit_piece:
             if gate == "H":
@@ -96,12 +126,14 @@ def gadgetize(network):
                 fresh += 1
             else:
                 phase_polynomial_part.append((gate, [mapping[qbit] for qbit in qbits]))
-        new_rotation = [
-            (pauli, mapping[qbit])
-            for qbit, pauli in enumerate(rotation)
-            if pauli != "I"
-        ]
+        new_rotation = ["I"] * predicted_nqbits
+        for qbit, pauli in enumerate(rotation):
+            new_rotation[mapping[qbit]] = pauli
         phase_polynomial_part.append(
-            ("ROTATION", new_rotation, corrections.get(index, []))
+            ("ROTATION", "".join(new_rotation), corrections.get(index, []))
         )
-    return beginning, phase_polynomial_part, end
+    return (
+        beginning,
+        simplify_phase_polynomial(phase_polynomial_part, predicted_nqbits),
+        end,
+    )
