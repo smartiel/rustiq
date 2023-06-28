@@ -25,18 +25,10 @@ def chunkize(paulis, n_h_ancillae, h_optimal=False):
         end = start + 1
         if start == len(paulis):
             break
-    # print("# of phase polynomials:", len(chunks))
     return chunks
 
 
-print(predict_nbqbits(paulis, False))
-print(predict_nbqbits(paulis, True))
-for n_anc in range(1, 31):
-    print("=" * 40)
+for n_anc in range(31):
     chunks = chunkize(paulis, n_anc)
-    print(max([predict_nbqbits(chunk, False) for chunk in chunks if chunk]))
-    print(max([predict_nbqbits(chunk, True) for chunk in chunks if chunk]))
     chunks_opt = chunkize(paulis, n_anc, True)
-    # print([predict_nbqbits(chunk, False) for chunk in chunks_opt if chunk])
-    # print([predict_nbqbits(chunk, True) for chunk in chunks_opt if chunk])
-    print(f"{n_anc},{len(chunks)},{len(chunks_opt)}")
+    print(f"{n_anc},{len(chunks)},{len(chunks_opt)}", flush=True)
