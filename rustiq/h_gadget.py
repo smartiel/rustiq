@@ -84,7 +84,7 @@ def simplify_phase_polynomial(phase_polynomial_part, nqbits):
             for i, p in enumerate(gate[1]):
                 if p == "Z":
                     z_vec[i] = 1
-            phase_poly.append(z_vec)
+            phase_poly.append((z_vec, gate[2]))
             continue
         elif gate[0] == "CNOT":
             for rotation in phase_poly:
@@ -137,3 +137,18 @@ def gadgetize(network):
         simplify_phase_polynomial(phase_polynomial_part, predicted_nqbits),
         end,
     )
+
+
+def predict_nbqbits(pauli_sequence):
+    """
+    Predict the total number of qubits required in order
+    to implement this sequence while gadgetizing every H gate.
+    """
+    network = diagonalization_network(pauli_sequence)
+    nqbits = len(network[0][1])
+    predicted_nqbits = nqbits
+    for piece, _ in network:
+        for gate in piece:
+            if gate[0] == "H":
+                predicted_nqbits += 1
+    return predicted_nqbits
