@@ -83,6 +83,7 @@ impl Circuit {
             gates: new_gates,
         };
     }
+    /// Converts the circuit into a python compatible structure
     pub fn to_vec(&self) -> Vec<(String, Vec<usize>)> {
         self.gates.iter().map(|gate| gate.to_vec()).collect()
     }

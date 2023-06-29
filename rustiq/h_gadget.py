@@ -155,3 +155,38 @@ def predict_nbqbits(pauli_sequence, optimal=False, display=False):
             if gate[0] == "H":
                 predicted_nqbits += 1
     return predicted_nqbits
+
+
+def circuit_to_qiskit(qiskit_circuit, circuit, dagger=False):
+    for gate in reversed(circuit) if dagger else circuit:
+        if gate[0] == "H":
+            qiskit_circuit.h(*gate[1])
+        elif gate[0] == "CNOT":
+            qiskit_circuit.cx(*gate[1])
+        elif gate[0] == "S":
+            qiskit_circuit.rz((-np.pi / 2) if dagger else (np.pi / 2), *gate[1])
+        else:
+            raise ValueError(f"Unknown gate {gate[0]}")
+
+
+def network_to_qiskit(initial_clifford, network, angles):
+    from qiskit.circuit import QuantumCircuit
+
+    first_rotation = network[0][1][1]
+    nqbits = len(first_rotation)
+    circuit = QuantumCircuit(nqbits, nqbits)
+    circuit_to_qiskit(circuit, initial_clifford)
+    for (piece, (phase, rotation)), angle in zip(network, angles):
+        circuit_to_qiskit(circuit, piece)
+        # Implementing the diagonal rotation
+        support = [qbit for qbit in range(nqbits) if rotation[qbit] == "Z"]
+        for control in support[1:]:
+            circuit.cx(control, support[0])
+        circuit.rz(-angle if phase else angle, support[0])
+        for control in support[1:]:
+            circuit.cx(control, support[0])
+    # Undoing the full Clifford circuit
+    for piece, _ in reversed(network):
+        circuit_to_qiskit(circuit, piece, dagger=True)
+    circuit_to_qiskit(circuit, initial_clifford, dagger=True)
+    return circuit

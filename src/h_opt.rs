@@ -2,55 +2,7 @@ use super::circuit::{Circuit, Gate};
 use super::pauli_set::PauliSet;
 use pyo3::prelude::*;
 
-fn is_shadowed(gate: &Gate, shadows: &Vec<bool>) -> bool {
-    match gate {
-        Gate::CNOT(i, j) => shadows[*j],
-        Gate::H(i) => shadows[*i],
-        Gate::S(i) => shadows[*i],
-        Gate::Sd(i) => shadows[*i],
-        Gate::SqrtX(i) => shadows[*i],
-        Gate::SqrtXd(i) => shadows[*i],
-    }
-}
-
-fn pull_h_left(network: &mut Vec<(Circuit, String)>) {
-    if network.len() == 0 {
-        return;
-    }
-    let n = network[0].0.nqbits;
-    let mut init_circuit = Circuit::new(n);
-    let mut shadows = vec![false; n];
-    for (circuit, rotation) in network.iter_mut() {
-        let mut new_circuit = Circuit::new(circuit.nqbits);
-        for gate in circuit.gates.drain(..) {
-            if !is_shadowed(&gate, &shadows) {
-                init_circuit.gates.push(gate);
-            } else {
-                new_circuit.gates.push(gate);
-            }
-            match gate {
-                Gate::CNOT(i, j) => {
-                    if shadows[j] {
-                        shadows[i] = true;
-                    }
-                }
-                _ => (),
-            }
-        }
-        circuit.gates = new_circuit.gates;
-        for (i, pauli) in rotation.chars().enumerate() {
-            if pauli == 'Z' {
-                shadows[i] = true;
-            }
-        }
-        if shadows.iter().all(|b| *b) {
-            break;
-        }
-    }
-    network[0].0.gates = init_circuit.gates;
-}
-
-pub fn diagonalization_network_pset(pauli_set: &mut PauliSet) -> Vec<(Circuit, String)> {
+pub fn diagonalization_network_pset(pauli_set: &mut PauliSet) -> Vec<(Circuit, (bool, String))> {
     let mut output = Vec::new();
     let mut rotations = Vec::new();
     if pauli_set.len() == 0 {
@@ -74,8 +26,7 @@ pub fn diagonalization_network_pset(pauli_set: &mut PauliSet) -> Vec<(Circuit, S
             pauli_set.h(control);
         }
         output.push(piece);
-        let (_, axis) = pauli_set.get(i);
-        rotations.push(axis);
+        rotations.push(pauli_set.get(i));
     }
     return output.into_iter().zip(rotations).collect();
 }
@@ -84,7 +35,7 @@ pub fn h_opt(
     axes: Vec<String>,
 ) -> (
     Vec<(String, Vec<usize>)>,
-    Vec<(Vec<(String, Vec<usize>)>, String)>,
+    Vec<(Vec<(String, Vec<usize>)>, (bool, String))>,
 ) {
     let reversed_axes: Vec<_> = axes.clone().into_iter().rev().collect();
     let mut reversed_pset = PauliSet::from_slice(&reversed_axes);
@@ -129,7 +80,7 @@ pub fn diagonalization_network(
     optimal: bool,
 ) -> (
     Vec<(String, Vec<usize>)>,
-    Vec<(Vec<(String, Vec<usize>)>, String)>,
+    Vec<(Vec<(String, Vec<usize>)>, (bool, String))>,
 ) {
     if optimal {
         return h_opt(input);
@@ -139,7 +90,7 @@ pub fn diagonalization_network(
     let mut first_circuit = Circuit::new(pauli_set.n);
     first_circuit.gates.extend(output[0].0.gates.drain(..));
     return (
-        Vec::new(),
+        first_circuit.to_vec(),
         output.into_iter().map(|(c, s)| (c.to_vec(), s)).collect(),
     );
 }
