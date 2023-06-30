@@ -59,7 +59,7 @@ def propagate_x_correction(network, start_index, target_qbit, current_mapping):
     # We always anti-commute with the next rotation
     # (this is why we had a H gate in the first place)
     to_flip = [start_index]
-    for index, (piece, rotation) in enumerate(network[start_index + 1 :]):
+    for index, (piece, (_, rotation)) in enumerate(network[start_index + 1 :]):
         correction.conjugate_with(piece)
         axis = ["I"] * (max(current_mapping.values()) + 1)
         for qbit, pauli in enumerate(rotation):
@@ -73,7 +73,7 @@ def propagate_x_correction(network, start_index, target_qbit, current_mapping):
 def simplify_phase_polynomial(phase_polynomial_part, nqbits):
     phase_poly = []
     clifford_correction = []
-    for gate in reversed(phase_polynomial_part):
+    for gate in phase_polynomial_part:
         # Gate can be:
         # - a (diagonal) rotation
         # - a CNOT gate ====> here we need to do a bit of work
@@ -84,18 +84,18 @@ def simplify_phase_polynomial(phase_polynomial_part, nqbits):
             for i, p in enumerate(gate[1]):
                 if p == "Z":
                     z_vec[i] = 1
-            phase_poly.append((z_vec, gate[2]))
+            phase_poly.append((z_vec, gate[2], gate[3]))
             continue
         elif gate[0] == "CNOT":
             for rotation in phase_poly:
-                rotation[gate[1][0]] ^= rotation[gate[1][1]]
+                rotation[0][gate[1][0]] ^= rotation[0][gate[1][1]]
         clifford_correction.append(gate)
 
-    return phase_poly, list(reversed(clifford_correction))
+    return phase_poly, clifford_correction
 
 
 def gadgetize(network):
-    nqbits = len(network[0][1])
+    nqbits = len(network[0][1][1])
     mapping = dict(zip(range(nqbits), range(nqbits)))
     corrections = {}
     fresh = nqbits
@@ -103,13 +103,14 @@ def gadgetize(network):
     beginning = []
     phase_polynomial_part = []
     end = []
+    final_corrections = {}
     predicted_nqbits = nqbits
     for piece, _ in network:
         for gate in piece:
             if gate[0] == "H":
                 predicted_nqbits += 1
 
-    for index, (circuit_piece, rotation) in enumerate(network):
+    for index, (circuit_piece, (phase, rotation)) in enumerate(network):
         for gate, qbits in circuit_piece:
             if gate == "H":
                 beginning.append(("H", [fresh]))
@@ -117,7 +118,10 @@ def gadgetize(network):
                 end.append(("H", [mapping[qbits[0]]]))
                 end.append(("MEASUREMENT", [mapping[qbits[0]]], measurement_index))
                 mapping[qbits[0]] = fresh
-                to_flip, _ = propagate_x_correction(network, index, fresh, mapping)
+                to_flip, correction = propagate_x_correction(
+                    network, index, fresh, mapping
+                )
+                final_corrections[measurement_index] = str(correction)
                 for rot_index in to_flip:
                     corr = corrections.get(rot_index, [])
                     corr.append(measurement_index)
@@ -130,12 +134,13 @@ def gadgetize(network):
         for qbit, pauli in enumerate(rotation):
             new_rotation[mapping[qbit]] = pauli
         phase_polynomial_part.append(
-            ("ROTATION", "".join(new_rotation), corrections.get(index, []))
+            ("ROTATION", "".join(new_rotation), corrections.get(index, []), phase)
         )
     return (
         beginning,
         simplify_phase_polynomial(phase_polynomial_part, predicted_nqbits),
         end,
+        final_corrections,
     )
 
 
