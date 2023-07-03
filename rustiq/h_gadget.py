@@ -109,7 +109,6 @@ def gadgetize(network):
         for gate in piece:
             if gate[0] == "H":
                 predicted_nqbits += 1
-
     for index, (circuit_piece, (phase, rotation)) in enumerate(network):
         for gate, qbits in circuit_piece:
             if gate == "H":
@@ -153,7 +152,7 @@ def predict_nbqbits(pauli_sequence, optimal=False, display=False):
     if display:
         print(init_circuit)
         print(network)
-    nqbits = len(network[0][1])
+    nqbits = len(network[0][1][1])
     predicted_nqbits = nqbits
     for piece, _ in network:
         for gate in piece:
@@ -170,6 +169,8 @@ def circuit_to_qiskit(qiskit_circuit, circuit, dagger=False):
             qiskit_circuit.cx(*gate[1])
         elif gate[0] == "S":
             qiskit_circuit.rz((-np.pi / 2) if dagger else (np.pi / 2), *gate[1])
+        elif gate[0] == "CZ":
+            qiskit_circuit.cz(*gate[1])
         else:
             raise ValueError(f"Unknown gate {gate[0]}")
 
