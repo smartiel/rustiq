@@ -31,16 +31,17 @@ class Pauli:
                 pstring_out += "I"
         return pstring_out
 
-    def conjugate_with_gate(self, gate):
+    def conjugate_with_gate(self, gate, current_mapping):
+        qbits = [current_mapping[q] for q in gate[1]]
         if gate[0] == "H":
-            self.x_vec[gate[1][0]] ^= self.z_vec[gate[1][0]]
-            self.z_vec[gate[1][0]] ^= self.x_vec[gate[1][0]]
-            self.x_vec[gate[1][0]] ^= self.z_vec[gate[1][0]]
+            self.x_vec[qbits[0]] ^= self.z_vec[qbits[0]]
+            self.z_vec[qbits[0]] ^= self.x_vec[qbits[0]]
+            self.x_vec[qbits[0]] ^= self.z_vec[qbits[0]]
         elif gate[0] == "S":
-            self.z_vec[gate[1][0]] ^= self.x_vec[gate[1][0]]
+            self.z_vec[qbits[0]] ^= self.x_vec[qbits[0]]
         elif gate[0] == "CNOT":
-            self.z_vec[gate[1][0]] ^= self.z_vec[gate[1][1]]
-            self.x_vec[gate[1][1]] ^= self.x_vec[gate[1][0]]
+            self.z_vec[qbits[0]] ^= self.z_vec[qbits[1]]
+            self.x_vec[qbits[1]] ^= self.x_vec[qbits[0]]
         else:
             raise ValueError(f"Unknown gate {gate[0]}")
 
@@ -60,7 +61,7 @@ def propagate_x_correction(network, start_index, target_qbit, current_mapping):
     # (this is why we had a H gate in the first place)
     to_flip = [start_index]
     for index, (piece, (_, rotation)) in enumerate(network[start_index + 1 :]):
-        correction.conjugate_with(piece)
+        correction.conjugate_with(piece, current_mapping)
         axis = ["I"] * (max(current_mapping.values()) + 1)
         for qbit, pauli in enumerate(rotation):
             axis[current_mapping[qbit]] = pauli
