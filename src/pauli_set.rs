@@ -1,7 +1,31 @@
+#[cfg(target_feature = "avx2")]
+use std::arch::x86_64::{__m256i, _mm256_loadu_si256, _mm256_storeu_si256, _mm256_xor_si256};
+
 use super::circuit::{Circuit, Gate};
 use itertools::izip;
 use std::cmp::max;
 const WIDTH: usize = 64;
+
+#[cfg(target_feature = "avx2")]
+unsafe fn row_op(target_row: &mut [u64], source_row: &[u64]) {
+    for (v1, v2) in source_row.chunks(4).zip(target_row.chunks_mut(4)) {
+        let a_ptr = v1.as_ptr() as *const __m256i;
+        let b_ptr = v2.as_ptr() as *const __m256i;
+        let result_ptr = v2.as_mut_ptr() as *mut __m256i;
+
+        let av = _mm256_loadu_si256(a_ptr);
+        let bv = _mm256_loadu_si256(b_ptr);
+        let xorv = _mm256_xor_si256(av, bv);
+        _mm256_storeu_si256(result_ptr, xorv);
+    }
+}
+
+#[cfg(not(target_feature = "avx2"))]
+unsafe fn row_op(target_row: &mut [u64], source_row: &[u64]) {
+    for (v1, v2) in source_row.iter().zip(target_row.iter_mut()) {
+        *v2 ^= *v1;
+    }
+}
 
 fn get_stride(index: usize) -> usize {
     return index / WIDTH;
@@ -28,6 +52,10 @@ pub struct PauliSet {
 impl PauliSet {
     /// Allocate an empty set of n-qubit Pauli operators
     pub fn new(n: usize) -> Self {
+        #[cfg(target_feature = "avx2")]
+        println!("AVX2 xoring");
+        #[cfg(not(target_feature = "avx2"))]
+        println!("Standard xoring");
         Self {
             n,
             nstrides: 0,
@@ -215,6 +243,19 @@ impl PauliSet {
         for (v1, v2) in source_row.iter().zip(target_row.iter_mut()) {
             *v2 ^= *v1;
         }
+        unsafe {
+            row_op(target_row, source_row);
+        }
+        // let (left, right) = self.data_array.split_at_mut(max(i, j));
+        // let (target_row, source_row) = if i < j {
+        //     (right.get_mut(0).unwrap(), left.get(i).unwrap())
+        // } else {
+        //     (left.get_mut(j).unwrap(), right.get(0).unwrap())
+        // };
+
+        // for (v1, v2) in source_row.iter().zip(target_row.iter_mut()) {
+        //     *v2 ^= *v1;
+        // }
     }
 
     /// Offset the phases by the logical bitwise and of two target rows
