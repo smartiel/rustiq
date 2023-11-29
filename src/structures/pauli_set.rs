@@ -1,4 +1,5 @@
-use super::circuit::{Circuit, Gate};
+use super::pauli::Pauli;
+use super::pauli_like::PauliLike;
 use itertools::izip;
 use std::cmp::max;
 const WIDTH: usize = 64;
@@ -108,6 +109,9 @@ impl PauliSet {
         self.noperators += 1;
         return self.noperators - 1;
     }
+    pub fn insert_pauli(&mut self, pauli: &Pauli) -> usize {
+        self.insert_vec_bool(&pauli.data, pauli.phase)
+    }
     /// Clears the data of the Pauli set
     pub fn clear(&mut self) {
         for j in 0..self.nstrides {
@@ -130,7 +134,7 @@ impl PauliSet {
         self.start_offset += 1;
         self.noperators -= 1;
     }
-    /// Get the operator at index `operator_index`
+    /// Get the operator at index `operator_index` as a pair (phase, string)
     pub fn get(&self, operator_index: usize) -> (bool, String) {
         let operator_index = operator_index + self.start_offset;
         let mut output = String::new();
@@ -158,7 +162,7 @@ impl PauliSet {
         (((self.phases[stride] >> offset) & 1 != 0), output)
     }
 
-    /// Get the operator at index `operator_index`
+    /// Get the operator at index `operator_index` as a pair (phase, Vec<bool>)
     pub fn get_as_vec_bool(&self, operator_index: usize) -> (bool, Vec<bool>) {
         let operator_index = operator_index + self.start_offset;
         let mut output = Vec::new();
@@ -168,6 +172,12 @@ impl PauliSet {
             output.push(((self.data_array[i][stride] >> offset) & 1) != 0);
         }
         (((self.phases[stride] >> offset) & 1 != 0), output)
+    }
+
+    /// Get the operator at index `operator_index` as a `Pauli` object
+    pub fn get_as_pauli(&self, operator_index: usize) -> Pauli {
+        let (phase, data) = self.get_as_vec_bool(operator_index);
+        return Pauli::from_vec_bool(data, phase);
     }
 
     /// Checks if two operators in the set commute
@@ -245,54 +255,6 @@ impl PauliSet {
        Gate conjugation
     */
 
-    /// Conjugate the set of rotations via a H gate
-    pub fn h(&mut self, i: usize) {
-        self.data_array.swap(i, i + self.n);
-        self.update_phase_and(i, i + self.n);
-    }
-    /// Conjugate the set of rotations via a S gate
-    pub fn s(&mut self, i: usize) {
-        self.update_phase_and(i, i + self.n);
-        self.row_op(i, i + self.n);
-    }
-    /// Conjugate the set of rotations via a S dagger gate
-    pub fn sd(&mut self, i: usize) {
-        self.row_op(i, i + self.n);
-        self.update_phase_and(i, i + self.n);
-    }
-    /// Conjugate the set of rotations via a SQRT_X gate
-    pub fn sqrt_x(&mut self, i: usize) {
-        self.row_op(i + self.n, i);
-        self.update_phase_and(i, i + self.n);
-    }
-    /// Conjugate the set of rotations via a SQRT_X dagger gate
-    pub fn sqrt_xd(&mut self, i: usize) {
-        self.update_phase_and(i, i + self.n);
-        self.row_op(i + self.n, i);
-    }
-    /// Conjugate the set of rotations via a CNOT gate
-    pub fn cnot(&mut self, i: usize, j: usize) {
-        self.update_phase_and_many(i, j, i + self.n, j + self.n);
-        self.row_op(j + self.n, i + self.n);
-        self.row_op(i, j);
-        self.update_phase_and_many(i, j, i + self.n, j + self.n);
-    }
-    pub fn conjugate_with_gate(&mut self, gate: &Gate) {
-        match gate {
-            Gate::CNOT(i, j) => self.cnot(*i, *j),
-            Gate::H(i) => self.h(*i),
-            Gate::S(i) => self.s(*i),
-            Gate::Sd(i) => self.sd(*i),
-            Gate::SqrtX(i) => self.sqrt_x(*i),
-            Gate::SqrtXd(i) => self.sqrt_xd(*i),
-        }
-    }
-    pub fn conjugate_with_circuit(&mut self, circuit: &Circuit) {
-        for gate in circuit.gates.iter() {
-            self.conjugate_with_gate(gate);
-        }
-    }
-
     /*
        Metrics for synthesis algorithms
     */
@@ -329,6 +291,41 @@ impl PauliSet {
         for (phase, axis) in transposed {
             self.insert_vec_bool(&axis, phase);
         }
+    }
+}
+
+impl PauliLike for PauliSet {
+    /// Conjugate the set of rotations via a H gate
+    fn h(&mut self, i: usize) {
+        self.data_array.swap(i, i + self.n);
+        self.update_phase_and(i, i + self.n);
+    }
+    /// Conjugate the set of rotations via a S gate
+    fn s(&mut self, i: usize) {
+        self.update_phase_and(i, i + self.n);
+        self.row_op(i, i + self.n);
+    }
+    /// Conjugate the set of rotations via a S dagger gate
+    fn sd(&mut self, i: usize) {
+        self.row_op(i, i + self.n);
+        self.update_phase_and(i, i + self.n);
+    }
+    /// Conjugate the set of rotations via a SQRT_X gate
+    fn sqrt_x(&mut self, i: usize) {
+        self.row_op(i + self.n, i);
+        self.update_phase_and(i, i + self.n);
+    }
+    /// Conjugate the set of rotations via a SQRT_X dagger gate
+    fn sqrt_xd(&mut self, i: usize) {
+        self.update_phase_and(i, i + self.n);
+        self.row_op(i + self.n, i);
+    }
+    /// Conjugate the set of rotations via a CNOT gate
+    fn cnot(&mut self, i: usize, j: usize) {
+        self.update_phase_and_many(i, j, i + self.n, j + self.n);
+        self.row_op(j + self.n, i + self.n);
+        self.row_op(i, j);
+        self.update_phase_and_many(i, j, i + self.n, j + self.n);
     }
 }
 

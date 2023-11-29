@@ -1,12 +1,14 @@
-use super::circuit::{Circuit, Gate};
-use super::greedy_order_preserving::pauli_network_synthesis_no_permutation;
-use super::greedy_pauli_network::{pauli_network_synthesis, Metric};
-use super::pauli_set::PauliSet;
+use super::structures::clifford_circuit::{CliffordCircuit, CliffordGate};
+use super::structures::pauli_set::PauliSet;
+use super::synthesis::pauli_network::{
+    pauli_network_synthesis, pauli_network_synthesis_no_permutation, Metric,
+};
+use crate::structures::pauli_like::PauliLike;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
 use std::collections::HashSet;
-fn check_circuit(input: &[String], circuit: &Circuit) {
+fn check_circuit(input: &[String], circuit: &CliffordCircuit) {
     let mut hit_map: HashSet<usize> = HashSet::new();
     let mut bucket = PauliSet::from_slice(input);
     for i in 0..bucket.len() {
@@ -16,22 +18,22 @@ fn check_circuit(input: &[String], circuit: &Circuit) {
     }
     for gate in circuit.gates.iter() {
         match gate {
-            Gate::SqrtX(i) => {
+            CliffordGate::SqrtX(i) => {
                 bucket.sqrt_x(*i);
             }
-            Gate::SqrtXd(i) => {
+            CliffordGate::SqrtXd(i) => {
                 bucket.sqrt_xd(*i);
             }
-            Gate::S(i) => {
+            CliffordGate::S(i) => {
                 bucket.s(*i);
             }
-            Gate::Sd(i) => {
+            CliffordGate::Sd(i) => {
                 bucket.sd(*i);
             }
-            Gate::H(i) => {
+            CliffordGate::H(i) => {
                 bucket.h(*i);
             }
-            Gate::CNOT(i, j) => {
+            CliffordGate::CNOT(i, j) => {
                 bucket.cnot(*i, *j);
             }
         }

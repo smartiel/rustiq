@@ -1,7 +1,8 @@
 extern crate clap;
 use clap::{command, Arg};
-use rustiq::greedy_order_preserving::pauli_network_synthesis_no_permutation;
-use rustiq::greedy_pauli_network::{pauli_network_synthesis, Metric};
+use rustiq::synthesis::pauli_network::{
+    pauli_network_synthesis, pauli_network_synthesis_no_permutation, Metric,
+};
 use std::env;
 use std::fs;
 use std::time::Instant;

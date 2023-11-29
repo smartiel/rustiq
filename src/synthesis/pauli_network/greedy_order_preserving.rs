@@ -1,7 +1,9 @@
-/// This module implements a data structure encoding the commutation DAG of a sequence of Pauli operators.
-use super::circuit::Circuit;
 use super::greedy_pauli_network::{single_synthesis_step, Metric};
-use super::pauli_set::PauliSet;
+/// This module implements a data structure encoding the commutation DAG of a sequence of Pauli operators.
+use crate::structures::clifford_circuit::CliffordCircuit;
+use crate::structures::pauli_like::PauliLike;
+use crate::structures::pauli_set::PauliSet;
+
 use petgraph::prelude::*;
 use pyo3::prelude::*;
 
@@ -91,7 +93,7 @@ impl PauliDag {
     }
 
     /// Performs a single synthesis step
-    fn single_step_synthesis(&mut self, metric: &Metric) -> Circuit {
+    fn single_step_synthesis(&mut self, metric: &Metric) -> CliffordCircuit {
         self.front_layer.support_size_sort();
         let circuit = single_synthesis_step(&mut self.front_layer, metric);
         // Updating the global set of operators
@@ -104,9 +106,12 @@ impl PauliDag {
 
 /// A greedy synthesis method that preserves the sequence of operator up to swap of commuting operators.
 #[pyfunction]
-pub fn pauli_network_synthesis_no_permutation(axes: Vec<String>, metric: Metric) -> Circuit {
+pub fn pauli_network_synthesis_no_permutation(
+    axes: Vec<String>,
+    metric: Metric,
+) -> CliffordCircuit {
     let mut dag = PauliDag::from_slice(&axes);
-    let mut circuit = Circuit::new(dag.pauli_set.n);
+    let mut circuit = CliffordCircuit::new(dag.pauli_set.n);
     while dag.front_layer.len() > 0 {
         circuit.extend_with(&dag.single_step_synthesis(&metric));
     }
@@ -115,10 +120,10 @@ pub fn pauli_network_synthesis_no_permutation(axes: Vec<String>, metric: Metric)
 
 #[cfg(test)]
 mod greedy_synthesis_tests {
-    use super::super::circuit::Gate;
     use super::*;
+    use crate::structures::clifford_circuit::CliffordGate;
     use std::collections::HashSet;
-    fn check_circuit(input: &[String], circuit: &Circuit) -> bool {
+    fn check_circuit(input: &[String], circuit: &CliffordCircuit) -> bool {
         let mut hit_map: HashSet<usize> = HashSet::new();
         let mut bucket = PauliSet::from_slice(input);
         for i in 0..bucket.len() {
@@ -128,22 +133,22 @@ mod greedy_synthesis_tests {
         }
         for gate in circuit.gates.iter() {
             match gate {
-                Gate::SqrtX(i) => {
+                CliffordGate::SqrtX(i) => {
                     bucket.sqrt_x(*i);
                 }
-                Gate::SqrtXd(i) => {
+                CliffordGate::SqrtXd(i) => {
                     bucket.sqrt_xd(*i);
                 }
-                Gate::S(i) => {
+                CliffordGate::S(i) => {
                     bucket.s(*i);
                 }
-                Gate::Sd(i) => {
+                CliffordGate::Sd(i) => {
                     bucket.sd(*i);
                 }
-                Gate::H(i) => {
+                CliffordGate::H(i) => {
                     bucket.h(*i);
                 }
-                Gate::CNOT(i, j) => {
+                CliffordGate::CNOT(i, j) => {
                     bucket.cnot(*i, *j);
                 }
             }

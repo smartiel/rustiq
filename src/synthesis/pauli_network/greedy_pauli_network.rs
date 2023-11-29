@@ -3,8 +3,9 @@ use petgraph::prelude::*;
 use pyo3::prelude::*;
 use std::collections::HashMap;
 
-use super::circuit::{Circuit, Gate};
-use super::pauli_set::PauliSet;
+use crate::structures::clifford_circuit::{CliffordCircuit, CliffordGate};
+use crate::structures::pauli_like::PauliLike;
+use crate::structures::pauli_set::PauliSet;
 #[pyclass]
 #[derive(Debug, Clone)]
 pub enum Metric {
@@ -23,100 +24,140 @@ impl Metric {
     }
 }
 
-const ALL_CHUNKS: [[Option<Gate>; 3]; 18] = [
-    [None, None, Some(Gate::CNOT(0, 1))],
-    [None, None, Some(Gate::CNOT(1, 0))],
-    [None, Some(Gate::SqrtX(1)), Some(Gate::CNOT(0, 1))],
-    [None, Some(Gate::SqrtX(1)), Some(Gate::CNOT(1, 0))],
-    [None, Some(Gate::H(1)), Some(Gate::CNOT(0, 1))],
-    [None, Some(Gate::H(1)), Some(Gate::CNOT(1, 0))],
-    [Some(Gate::SqrtX(0)), None, Some(Gate::CNOT(0, 1))],
-    [Some(Gate::SqrtX(0)), None, Some(Gate::CNOT(1, 0))],
+pub const ALL_CHUNKS: [[Option<CliffordGate>; 3]; 18] = [
+    [None, None, Some(CliffordGate::CNOT(0, 1))],
+    [None, None, Some(CliffordGate::CNOT(1, 0))],
     [
-        Some(Gate::SqrtX(0)),
-        Some(Gate::SqrtX(1)),
-        Some(Gate::CNOT(0, 1)),
+        None,
+        Some(CliffordGate::SqrtX(1)),
+        Some(CliffordGate::CNOT(0, 1)),
     ],
     [
-        Some(Gate::SqrtX(0)),
-        Some(Gate::SqrtX(1)),
-        Some(Gate::CNOT(1, 0)),
+        None,
+        Some(CliffordGate::SqrtX(1)),
+        Some(CliffordGate::CNOT(1, 0)),
     ],
     [
-        Some(Gate::SqrtX(0)),
-        Some(Gate::H(1)),
-        Some(Gate::CNOT(0, 1)),
+        None,
+        Some(CliffordGate::H(1)),
+        Some(CliffordGate::CNOT(0, 1)),
     ],
     [
-        Some(Gate::SqrtX(0)),
-        Some(Gate::H(1)),
-        Some(Gate::CNOT(1, 0)),
-    ],
-    [Some(Gate::H(0)), None, Some(Gate::CNOT(0, 1))],
-    [Some(Gate::H(0)), None, Some(Gate::CNOT(1, 0))],
-    [
-        Some(Gate::H(0)),
-        Some(Gate::SqrtX(1)),
-        Some(Gate::CNOT(0, 1)),
+        None,
+        Some(CliffordGate::H(1)),
+        Some(CliffordGate::CNOT(1, 0)),
     ],
     [
-        Some(Gate::H(0)),
-        Some(Gate::SqrtX(1)),
-        Some(Gate::CNOT(1, 0)),
+        Some(CliffordGate::SqrtX(0)),
+        None,
+        Some(CliffordGate::CNOT(0, 1)),
     ],
-    [Some(Gate::H(0)), Some(Gate::H(1)), Some(Gate::CNOT(0, 1))],
-    [Some(Gate::H(0)), Some(Gate::H(1)), Some(Gate::CNOT(1, 0))],
+    [
+        Some(CliffordGate::SqrtX(0)),
+        None,
+        Some(CliffordGate::CNOT(1, 0)),
+    ],
+    [
+        Some(CliffordGate::SqrtX(0)),
+        Some(CliffordGate::SqrtX(1)),
+        Some(CliffordGate::CNOT(0, 1)),
+    ],
+    [
+        Some(CliffordGate::SqrtX(0)),
+        Some(CliffordGate::SqrtX(1)),
+        Some(CliffordGate::CNOT(1, 0)),
+    ],
+    [
+        Some(CliffordGate::SqrtX(0)),
+        Some(CliffordGate::H(1)),
+        Some(CliffordGate::CNOT(0, 1)),
+    ],
+    [
+        Some(CliffordGate::SqrtX(0)),
+        Some(CliffordGate::H(1)),
+        Some(CliffordGate::CNOT(1, 0)),
+    ],
+    [
+        Some(CliffordGate::H(0)),
+        None,
+        Some(CliffordGate::CNOT(0, 1)),
+    ],
+    [
+        Some(CliffordGate::H(0)),
+        None,
+        Some(CliffordGate::CNOT(1, 0)),
+    ],
+    [
+        Some(CliffordGate::H(0)),
+        Some(CliffordGate::SqrtX(1)),
+        Some(CliffordGate::CNOT(0, 1)),
+    ],
+    [
+        Some(CliffordGate::H(0)),
+        Some(CliffordGate::SqrtX(1)),
+        Some(CliffordGate::CNOT(1, 0)),
+    ],
+    [
+        Some(CliffordGate::H(0)),
+        Some(CliffordGate::H(1)),
+        Some(CliffordGate::CNOT(0, 1)),
+    ],
+    [
+        Some(CliffordGate::H(0)),
+        Some(CliffordGate::H(1)),
+        Some(CliffordGate::CNOT(1, 0)),
+    ],
 ];
 
-fn chunk_to_circuit(
-    chunk: &[Option<Gate>; 3],
+pub fn chunk_to_circuit(
+    chunk: &[Option<CliffordGate>; 3],
     qbit1: usize,
     qbit2: usize,
     nqbits: usize,
-) -> Circuit {
-    let mut circuit_piece = Circuit::new(nqbits);
+) -> CliffordCircuit {
+    let mut circuit_piece = CliffordCircuit::new(nqbits);
     for gate in chunk {
         match gate {
-            Some(Gate::S(i)) => {
+            Some(CliffordGate::S(i)) => {
                 if *i == 0 {
-                    circuit_piece.gates.push(Gate::S(qbit1));
+                    circuit_piece.gates.push(CliffordGate::S(qbit1));
                 } else {
-                    circuit_piece.gates.push(Gate::S(qbit2));
+                    circuit_piece.gates.push(CliffordGate::S(qbit2));
                 }
             }
-            Some(Gate::Sd(i)) => {
+            Some(CliffordGate::Sd(i)) => {
                 if *i == 0 {
-                    circuit_piece.gates.push(Gate::Sd(qbit1));
+                    circuit_piece.gates.push(CliffordGate::Sd(qbit1));
                 } else {
-                    circuit_piece.gates.push(Gate::Sd(qbit2));
+                    circuit_piece.gates.push(CliffordGate::Sd(qbit2));
                 }
             }
-            Some(Gate::SqrtX(i)) => {
+            Some(CliffordGate::SqrtX(i)) => {
                 if *i == 0 {
-                    circuit_piece.gates.push(Gate::SqrtX(qbit1));
+                    circuit_piece.gates.push(CliffordGate::SqrtX(qbit1));
                 } else {
-                    circuit_piece.gates.push(Gate::SqrtX(qbit2));
+                    circuit_piece.gates.push(CliffordGate::SqrtX(qbit2));
                 }
             }
-            Some(Gate::SqrtXd(i)) => {
+            Some(CliffordGate::SqrtXd(i)) => {
                 if *i == 0 {
-                    circuit_piece.gates.push(Gate::SqrtXd(qbit1));
+                    circuit_piece.gates.push(CliffordGate::SqrtXd(qbit1));
                 } else {
-                    circuit_piece.gates.push(Gate::SqrtXd(qbit2));
+                    circuit_piece.gates.push(CliffordGate::SqrtXd(qbit2));
                 }
             }
-            Some(Gate::H(i)) => {
+            Some(CliffordGate::H(i)) => {
                 if *i == 0 {
-                    circuit_piece.gates.push(Gate::H(qbit1));
+                    circuit_piece.gates.push(CliffordGate::H(qbit1));
                 } else {
-                    circuit_piece.gates.push(Gate::H(qbit2));
+                    circuit_piece.gates.push(CliffordGate::H(qbit2));
                 }
             }
-            Some(Gate::CNOT(i, _)) => {
+            Some(CliffordGate::CNOT(i, _)) => {
                 if *i == 0 {
-                    circuit_piece.gates.push(Gate::CNOT(qbit1, qbit2));
+                    circuit_piece.gates.push(CliffordGate::CNOT(qbit1, qbit2));
                 } else {
-                    circuit_piece.gates.push(Gate::CNOT(qbit2, qbit1));
+                    circuit_piece.gates.push(CliffordGate::CNOT(qbit2, qbit1));
                 }
             }
             None => {}
@@ -125,9 +166,9 @@ fn chunk_to_circuit(
     return circuit_piece;
 }
 
-fn conjugate_with_chunk(
+pub fn conjugate_with_chunk(
     bucket: &mut PauliSet,
-    chunk: &[Option<Gate>; 3],
+    chunk: &[Option<CliffordGate>; 3],
     qbit1: usize,
     qbit2: usize,
     reverse: bool,
@@ -135,28 +176,28 @@ fn conjugate_with_chunk(
     if reverse {
         for gate in chunk.iter().rev() {
             match gate {
-                Some(Gate::S(i)) => {
+                Some(CliffordGate::S(i)) => {
                     if *i == 0 {
                         bucket.s(qbit1);
                     } else {
                         bucket.s(qbit2);
                     }
                 }
-                Some(Gate::H(i)) => {
+                Some(CliffordGate::H(i)) => {
                     if *i == 0 {
                         bucket.h(qbit1);
                     } else {
                         bucket.h(qbit2);
                     }
                 }
-                Some(Gate::SqrtX(i)) => {
+                Some(CliffordGate::SqrtX(i)) => {
                     if *i == 0 {
                         bucket.sqrt_x(qbit1);
                     } else {
                         bucket.sqrt_x(qbit2);
                     }
                 }
-                Some(Gate::CNOT(i, _)) => {
+                Some(CliffordGate::CNOT(i, _)) => {
                     if *i == 0 {
                         bucket.cnot(qbit1, qbit2);
                     } else {
@@ -169,28 +210,28 @@ fn conjugate_with_chunk(
     } else {
         for gate in chunk.iter() {
             match gate {
-                Some(Gate::S(i)) => {
+                Some(CliffordGate::S(i)) => {
                     if *i == 0 {
                         bucket.s(qbit1);
                     } else {
                         bucket.s(qbit2);
                     }
                 }
-                Some(Gate::SqrtX(i)) => {
+                Some(CliffordGate::SqrtX(i)) => {
                     if *i == 0 {
                         bucket.sqrt_x(qbit1);
                     } else {
                         bucket.sqrt_x(qbit2);
                     }
                 }
-                Some(Gate::H(i)) => {
+                Some(CliffordGate::H(i)) => {
                     if *i == 0 {
                         bucket.h(qbit1);
                     } else {
                         bucket.h(qbit2);
                     }
                 }
-                Some(Gate::CNOT(i, _)) => {
+                Some(CliffordGate::CNOT(i, _)) => {
                     if *i == 0 {
                         bucket.cnot(qbit1, qbit2);
                     } else {
@@ -203,9 +244,9 @@ fn conjugate_with_chunk(
     }
 }
 
-fn single_synthesis_step_count(bucket: &mut PauliSet) -> Circuit {
+fn single_synthesis_step_count(bucket: &mut PauliSet) -> CliffordCircuit {
     let mut max_score = -1;
-    let mut best_chunk: [Option<Gate>; 3] = [None; 3];
+    let mut best_chunk: [Option<CliffordGate>; 3] = [None; 3];
     let mut best_args: [usize; 2] = [0, 0];
     for qbit1 in 0..bucket.n {
         for qbit2 in 0..qbit1 {
@@ -232,9 +273,12 @@ fn single_synthesis_step_count(bucket: &mut PauliSet) -> Circuit {
 
 fn build_graph(
     bucket: &mut PauliSet,
-) -> (UnGraph<(), i32>, HashMap<(usize, usize), [Option<Gate>; 3]>) {
+) -> (
+    UnGraph<(), i32>,
+    HashMap<(usize, usize), [Option<CliffordGate>; 3]>,
+) {
     let mut graph: UnGraph<(), i32> = UnGraph::new_undirected();
-    let mut best_chunks: HashMap<(usize, usize), [Option<Gate>; 3]> = HashMap::new();
+    let mut best_chunks: HashMap<(usize, usize), [Option<CliffordGate>; 3]> = HashMap::new();
     for _ in 0..bucket.n {
         graph.add_node(());
     }
@@ -243,7 +287,7 @@ fn build_graph(
             // computing the initial identity count
             let init_id_count = bucket.count_id(qbit1) + bucket.count_id(qbit2);
             let mut max_score = 0;
-            let mut best_chunk: [Option<Gate>; 3] = [None; 3];
+            let mut best_chunk: [Option<CliffordGate>; 3] = [None; 3];
             for chunk in ALL_CHUNKS {
                 // conjugating with the chunk
                 conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, false);
@@ -266,10 +310,10 @@ fn build_graph(
     return (graph, best_chunks);
 }
 
-fn single_synthesis_step_depth(bucket: &mut PauliSet) -> Circuit {
+fn single_synthesis_step_depth(bucket: &mut PauliSet) -> CliffordCircuit {
     let (graph, best_chunks) = build_graph(bucket);
     let matching = maximum_matching(&graph);
-    let mut circuit_piece = Circuit::new(bucket.n);
+    let mut circuit_piece = CliffordCircuit::new(bucket.n);
     for (qbit1, qbit2) in matching.edges() {
         let chunk = best_chunks[&(qbit1.index(), qbit2.index())];
         circuit_piece.extend_with(&chunk_to_circuit(
@@ -284,7 +328,7 @@ fn single_synthesis_step_depth(bucket: &mut PauliSet) -> Circuit {
     return circuit_piece;
 }
 
-pub fn single_synthesis_step(bucket: &mut PauliSet, metric: &Metric) -> Circuit {
+pub fn single_synthesis_step(bucket: &mut PauliSet, metric: &Metric) -> CliffordCircuit {
     return match metric {
         Metric::COUNT => single_synthesis_step_count(bucket),
         Metric::DEPTH => single_synthesis_step_depth(bucket),
@@ -293,13 +337,13 @@ pub fn single_synthesis_step(bucket: &mut PauliSet, metric: &Metric) -> Circuit 
 
 /// Builds a Pauli network for a collection of Pauli operators
 #[pyfunction]
-pub fn pauli_network_synthesis(axes: Vec<String>, metric: Metric) -> Circuit {
+pub fn pauli_network_synthesis(axes: Vec<String>, metric: Metric) -> CliffordCircuit {
     if axes.is_empty() {
-        return Circuit::new(0);
+        return CliffordCircuit::new(0);
     }
     let nqbits = axes[0].len();
     let mut bucket = PauliSet::new(nqbits);
-    let mut output = Circuit::new(nqbits);
+    let mut output = CliffordCircuit::new(nqbits);
     for axis in axes {
         bucket.insert(&axis, false);
     }
@@ -321,7 +365,7 @@ pub fn pauli_network_synthesis(axes: Vec<String>, metric: Metric) -> Circuit {
 mod greedy_synthesis_tests {
     use super::*;
     use std::collections::HashSet;
-    fn check_circuit(input: &[String], circuit: &Circuit) -> bool {
+    fn check_circuit(input: &[String], circuit: &CliffordCircuit) -> bool {
         let mut hit_map: HashSet<usize> = HashSet::new();
         let mut bucket = PauliSet::from_slice(input);
         for i in 0..bucket.len() {
@@ -331,22 +375,22 @@ mod greedy_synthesis_tests {
         }
         for gate in circuit.gates.iter() {
             match gate {
-                Gate::SqrtX(i) => {
+                CliffordGate::SqrtX(i) => {
                     bucket.sqrt_x(*i);
                 }
-                Gate::SqrtXd(i) => {
+                CliffordGate::SqrtXd(i) => {
                     bucket.sqrt_xd(*i);
                 }
-                Gate::S(i) => {
+                CliffordGate::S(i) => {
                     bucket.s(*i);
                 }
-                Gate::Sd(i) => {
+                CliffordGate::Sd(i) => {
                     bucket.sd(*i);
                 }
-                Gate::H(i) => {
+                CliffordGate::H(i) => {
                     bucket.h(*i);
                 }
-                Gate::CNOT(i, j) => {
+                CliffordGate::CNOT(i, j) => {
                     bucket.cnot(*i, *j);
                 }
             }
