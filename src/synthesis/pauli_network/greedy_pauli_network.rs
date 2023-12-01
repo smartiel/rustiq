@@ -4,25 +4,9 @@ use pyo3::prelude::*;
 use std::collections::HashMap;
 
 use crate::structures::clifford_circuit::{CliffordCircuit, CliffordGate};
+use crate::structures::metric::Metric;
 use crate::structures::pauli_like::PauliLike;
 use crate::structures::pauli_set::PauliSet;
-#[pyclass]
-#[derive(Debug, Clone)]
-pub enum Metric {
-    COUNT,
-    DEPTH,
-}
-
-impl Metric {
-    /// Attempts to build a Metric from a string
-    pub fn from_string(name: &str) -> Result<Self, String> {
-        match name {
-            "depth" => Result::Ok(Self::DEPTH),
-            "count" => Result::Ok(Self::COUNT),
-            &_ => Result::Err(format!("Unknown metric name `{}`", name)),
-        }
-    }
-}
 
 pub const ALL_CHUNKS: [[Option<CliffordGate>; 3]; 18] = [
     [None, None, Some(CliffordGate::CNOT(0, 1))],
@@ -160,7 +144,7 @@ pub fn chunk_to_circuit(
                     circuit_piece.gates.push(CliffordGate::CNOT(qbit2, qbit1));
                 }
             }
-            None => {}
+            _ => {}
         }
     }
     return circuit_piece;
@@ -392,6 +376,9 @@ mod greedy_synthesis_tests {
                 }
                 CliffordGate::CNOT(i, j) => {
                     bucket.cnot(*i, *j);
+                }
+                CliffordGate::CZ(i, j) => {
+                    bucket.cz(*i, *j);
                 }
             }
             for i in 0..bucket.len() {

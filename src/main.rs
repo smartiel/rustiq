@@ -1,7 +1,8 @@
 extern crate clap;
 use clap::{command, Arg};
+use rustiq::structures::metric::Metric;
 use rustiq::synthesis::pauli_network::{
-    pauli_network_synthesis, pauli_network_synthesis_no_permutation, Metric,
+    pauli_network_synthesis, pauli_network_synthesis_no_permutation,
 };
 use std::env;
 use std::fs;

@@ -1,6 +1,7 @@
-use super::greedy_pauli_network::{single_synthesis_step, Metric};
+use super::greedy_pauli_network::single_synthesis_step;
 /// This module implements a data structure encoding the commutation DAG of a sequence of Pauli operators.
 use crate::structures::clifford_circuit::CliffordCircuit;
+use crate::structures::metric::Metric;
 use crate::structures::pauli_like::PauliLike;
 use crate::structures::pauli_set::PauliSet;
 
@@ -151,6 +152,7 @@ mod greedy_synthesis_tests {
                 CliffordGate::CNOT(i, j) => {
                     bucket.cnot(*i, *j);
                 }
+                _ => (),
             }
             for i in 0..bucket.len() {
                 if bucket.support_size(i) == 1 {

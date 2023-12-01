@@ -23,6 +23,7 @@ pub trait PauliLike {
     fn conjugate_with_gate(&mut self, gate: &CliffordGate) {
         match gate {
             CliffordGate::CNOT(i, j) => self.cnot(*i, *j),
+            CliffordGate::CZ(i, j) => self.cz(*i, *j),
             CliffordGate::H(i) => self.h(*i),
             CliffordGate::S(i) => self.s(*i),
             CliffordGate::Sd(i) => self.sd(*i),

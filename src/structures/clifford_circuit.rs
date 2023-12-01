@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 #[derive(Debug, Clone, Copy)]
 pub enum CliffordGate {
     CNOT(usize, usize),
+    CZ(usize, usize),
     H(usize),
     S(usize),
     Sd(usize),
@@ -21,6 +22,7 @@ impl CliffordGate {
     pub fn to_vec(&self) -> (String, Vec<usize>) {
         match self {
             CliffordGate::CNOT(i, j) => ("CNOT".to_owned(), vec![*i, *j]),
+            CliffordGate::CZ(i, j) => ("CZ".to_owned(), vec![*i, *j]),
             CliffordGate::H(i) => ("H".to_owned(), vec![*i]),
             CliffordGate::S(i) => ("S".to_owned(), vec![*i]),
             CliffordGate::Sd(i) => ("Sd".to_owned(), vec![*i]),

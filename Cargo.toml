@@ -10,3 +10,4 @@ clap = { version = "4.2.4", features = ["derive", "cargo"] }
 petgraph = "0.6.3"
 itertools = "0.10.5"
 pyo3 = { version = "0.18.2", features = ["extension-module"] }
+rand = "*"

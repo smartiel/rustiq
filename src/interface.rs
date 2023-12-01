@@ -1,7 +1,8 @@
 use super::structures::clifford_circuit::{CliffordCircuit, CliffordGate};
+use super::structures::metric::Metric;
 use super::structures::pauli_set::PauliSet;
 use super::synthesis::pauli_network::{
-    pauli_network_synthesis, pauli_network_synthesis_no_permutation, Metric,
+    pauli_network_synthesis, pauli_network_synthesis_no_permutation,
 };
 use crate::structures::pauli_like::PauliLike;
 use pyo3::prelude::*;
@@ -35,6 +36,9 @@ fn check_circuit(input: &[String], circuit: &CliffordCircuit) {
             }
             CliffordGate::CNOT(i, j) => {
                 bucket.cnot(*i, *j);
+            }
+            CliffordGate::CZ(i, j) => {
+                bucket.cz(*i, *j);
             }
         }
         for i in 0..bucket.len() {
