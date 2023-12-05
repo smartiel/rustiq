@@ -27,6 +27,18 @@ impl GraphState {
         }
         return gs;
     }
+    pub fn from_adj(adj: Vec<Vec<bool>>) -> Self {
+        let n = adj.len();
+        for row in adj.iter() {
+            assert_eq!(row.len(), n, "Matrix is not square");
+        }
+        for i in 0..n {
+            for j in 0..n {
+                assert_eq!(adj[i][j], adj[j][i], "Matrix is not symmetric");
+            }
+        }
+        Self { adj, n }
+    }
     pub fn count_ones(&self) -> usize {
         self.adj
             .iter()

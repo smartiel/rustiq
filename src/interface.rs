@@ -1,6 +1,5 @@
-use super::structures::clifford_circuit::{CliffordCircuit, CliffordGate};
-use super::structures::metric::Metric;
-use super::structures::pauli_set::PauliSet;
+use super::structures::{CliffordCircuit, CliffordGate, GraphState, Metric, PauliSet};
+use super::synthesis::clifford::graph_state::synthesize_graph_state;
 use super::synthesis::pauli_network::{
     pauli_network_synthesis, pauli_network_synthesis_no_permutation,
 };
@@ -58,7 +57,7 @@ fn check_circuit(input: &[String], circuit: &CliffordCircuit) {
 }
 
 #[pyfunction]
-/// Single interface function for the 4 greedy algorithms
+/// Single interface function for the 4 greedy algorithms for Pauli network synthesis
 /// The return value can be easily used on the python side
 pub fn greedy_pauli_network(
     operator_sequence: Vec<String>,
@@ -77,9 +76,26 @@ pub fn greedy_pauli_network(
     return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
 }
 
+#[pyfunction]
+/// Single interface function for the 4 greedy algorithms for Pauli network synthesis
+/// The return value can be easily used on the python side
+pub fn graph_state_synthesis(
+    graph_adj: Vec<Vec<bool>>,
+    metric: Metric,
+    niter: usize,
+) -> Vec<(String, Vec<usize>)> {
+    let gs = GraphState::from_adj(graph_adj);
+    let mut circuit = synthesize_graph_state(&gs, &metric, niter);
+    for i in 0..gs.n {
+        circuit.gates.push(CliffordGate::H(i));
+    }
+    circuit.gates.iter().map(|gate| gate.to_vec()).collect()
+}
+
 #[pymodule]
 fn rustiq(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(greedy_pauli_network))?;
+    m.add_wrapped(wrap_pyfunction!(graph_state_synthesis))?;
     m.add_class::<Metric>()?;
     Ok(())
 }
