@@ -20,17 +20,17 @@ fn score_matrix(graph: &mut GraphState, qubits_used: &Vec<bool>) -> Vec<Vec<i32>
 }
 
 fn pick_best_operation(scores: &Vec<Vec<i32>>) -> (i32, (usize, usize)) {
-    let mut best_cost = 0;
+    let mut best_score = 0;
     let mut best_qubits: (usize, usize) = (0, 0);
     for i in 0..scores.len() {
         for j in 0..scores.len() {
-            if scores[i][j] > best_cost {
-                best_cost = scores[i][j];
+            if scores[i][j] > best_score {
+                best_score = scores[i][j];
                 best_qubits = (i, j);
             }
         }
     }
-    return (best_cost, best_qubits);
+    return (best_score, best_qubits);
 }
 
 fn get_czs(graph: &GraphState, qubits_used: &Vec<bool>) -> CliffordCircuit {

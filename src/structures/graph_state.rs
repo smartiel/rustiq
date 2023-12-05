@@ -35,7 +35,7 @@ impl GraphState {
     }
 }
 impl PauliLike for GraphState {
-    fn h(&mut self, i: usize) {
+    fn h(&mut self, _: usize) {
         panic!("You are not supposed to apply H to a graph state!");
     }
 
@@ -47,11 +47,11 @@ impl PauliLike for GraphState {
         self.adj[i][i] ^= true;
     }
 
-    fn sqrt_x(&mut self, i: usize) {
+    fn sqrt_x(&mut self, _: usize) {
         panic!("You are not supposed to apply SQRT_X to a graph state!");
     }
 
-    fn sqrt_xd(&mut self, i: usize) {
+    fn sqrt_xd(&mut self, _: usize) {
         panic!("You are not supposed to apply SQRT_XD to a graph state!");
     }
 

@@ -1,6 +1,6 @@
-use super::common::{make_full_rank, rowop};
+use super::common::{make_full_rank, permute_circuit, rowop};
 use crate::routines::decoding::information_set_decoding;
-use crate::structures::{CliffordCircuit, CliffordGate, GraphState, Metric, PauliLike, PauliSet};
+use crate::structures::{CliffordCircuit, CliffordGate, GraphState, Metric, PauliSet};
 use crate::synthesis::clifford::graph_state::synthesize_graph_state;
 
 fn gather_parities(
@@ -25,25 +25,6 @@ fn gather_parities(
         }
     }
     return (parities, moves);
-}
-
-fn permute_circuit(circuit: &CliffordCircuit, permutation: &Vec<usize>) -> CliffordCircuit {
-    let mut permuted_circuit = CliffordCircuit::new(circuit.nqbits);
-    for gate in circuit.gates.iter() {
-        match gate {
-            CliffordGate::CNOT(i, j) => permuted_circuit
-                .gates
-                .push(CliffordGate::CNOT(permutation[*i], permutation[*j])),
-            CliffordGate::CZ(i, j) => permuted_circuit
-                .gates
-                .push(CliffordGate::CZ(permutation[*i], permutation[*j])),
-            CliffordGate::S(i) => permuted_circuit
-                .gates
-                .push(CliffordGate::S(permutation[*i])),
-            _ => panic!("This should never happen"),
-        }
-    }
-    permuted_circuit
 }
 
 fn reduce_x_part(pauli_set: &PauliSet, niter: usize) -> (CliffordCircuit, Vec<usize>, GraphState) {
@@ -176,7 +157,7 @@ mod codiag_count_tests {
         for _ in 0..10 {
             let instance = random_instance(50, 20);
             let mut copy_instance = instance.clone();
-            let circuit = codiagonalize_count(&instance, 10);
+            let circuit = codiagonalize_count(&instance, 1);
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);
@@ -191,7 +172,7 @@ mod codiag_count_tests {
         for _ in 0..10 {
             let instance = random_instance(20, 50);
             let mut copy_instance = instance.clone();
-            let circuit = codiagonalize_count(&instance, 10);
+            let circuit = codiagonalize_count(&instance, 1);
             copy_instance.conjugate_with_circuit(&circuit);
             for i in 0..instance.len() {
                 let (_, vec) = copy_instance.get_as_vec_bool(i);

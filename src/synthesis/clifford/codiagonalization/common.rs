@@ -8,7 +8,7 @@ pub fn rowop(table: &mut Vec<Vec<bool>>, i: usize, j: usize) {
     }
 }
 
-fn colop(table: &mut Vec<Vec<bool>>, i: usize, j: usize) {
+pub fn colop(table: &mut Vec<Vec<bool>>, i: usize, j: usize) {
     for k in 0..table.len() {
         table[k][j] ^= table[k][i];
     }
@@ -65,7 +65,7 @@ fn swap_rows(table: &mut Vec<Vec<bool>>, rows: &Vec<usize>) {
     *table = new_table;
 }
 
-fn diagonalize(table: &mut Vec<Vec<bool>>, friend: &mut Vec<Vec<bool>>, rank: usize) {
+pub fn diagonalize(table: &mut Vec<Vec<bool>>, friend: &mut Vec<Vec<bool>>, rank: usize) {
     let n = table.first().unwrap().len();
     for i in 0..rank {
         let mut pivot = None;
@@ -135,7 +135,27 @@ pub fn make_full_rank(
 
     return (circuit, fr_rows, rk, (t_z, t_x));
 }
-
+pub fn permute_circuit(circuit: &CliffordCircuit, permutation: &Vec<usize>) -> CliffordCircuit {
+    let mut permuted_circuit = CliffordCircuit::new(circuit.nqbits);
+    for gate in circuit.gates.iter() {
+        match gate {
+            CliffordGate::CNOT(i, j) => permuted_circuit
+                .gates
+                .push(CliffordGate::CNOT(permutation[*i], permutation[*j])),
+            CliffordGate::CZ(i, j) => permuted_circuit
+                .gates
+                .push(CliffordGate::CZ(permutation[*i], permutation[*j])),
+            CliffordGate::S(i) => permuted_circuit
+                .gates
+                .push(CliffordGate::S(permutation[*i])),
+            CliffordGate::Sd(i) => permuted_circuit
+                .gates
+                .push(CliffordGate::Sd(permutation[*i])),
+            _ => panic!("This should never happen: encountered gate {:?}", gate),
+        }
+    }
+    permuted_circuit
+}
 #[cfg(test)]
 mod common_codiag_tests {
 
@@ -210,7 +230,7 @@ mod common_codiag_tests {
     fn test_random_thin() {
         for _ in 0..10 {
             let pset = random_instance(50, 20);
-            let (_, _, rk, (z, x)) = make_full_rank(&pset);
+            let (_, _, rk, (_, x)) = make_full_rank(&pset);
             for i in 0..rk {
                 let mut v = vec![false; pset.len()];
                 v[i] = true;
@@ -222,7 +242,7 @@ mod common_codiag_tests {
     fn test_random_thick() {
         for _ in 0..10 {
             let pset = random_instance(20, 50);
-            let (_, _, rk, (z, x)) = make_full_rank(&pset);
+            let (_, _, rk, (_, x)) = make_full_rank(&pset);
             for i in 0..rk {
                 let mut v = vec![false; pset.len()];
                 v[i] = true;
