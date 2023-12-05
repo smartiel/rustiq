@@ -62,12 +62,44 @@ impl CliffordCircuit {
             })
             .count();
     }
+    /// Counts the number of CNOT gates
+    pub fn entangling_count(&self) -> usize {
+        return self
+            .gates
+            .iter()
+            .filter(|gate| match gate {
+                CliffordGate::CNOT(_, _) => true,
+                CliffordGate::CZ(_, _) => true,
+                _ => false,
+            })
+            .count();
+    }
     /// Computes the CNOT depth of the circuit
     pub fn cnot_depth(&self) -> usize {
         let mut depths: Vec<usize> = vec![0; self.nqbits];
         for gate in self.gates.iter() {
             match gate {
                 CliffordGate::CNOT(i, j) => {
+                    let gate_depth = std::cmp::max(depths[*i], depths[*j]) + 1;
+                    depths[*i] = gate_depth;
+                    depths[*j] = gate_depth;
+                }
+                _ => {}
+            }
+        }
+        return *depths.iter().max().unwrap();
+    }
+    /// Computes the CNOT depth of the circuit
+    pub fn entangling_depth(&self) -> usize {
+        let mut depths: Vec<usize> = vec![0; self.nqbits];
+        for gate in self.gates.iter() {
+            match gate {
+                CliffordGate::CNOT(i, j) => {
+                    let gate_depth = std::cmp::max(depths[*i], depths[*j]) + 1;
+                    depths[*i] = gate_depth;
+                    depths[*j] = gate_depth;
+                }
+                CliffordGate::CZ(i, j) => {
                     let gate_depth = std::cmp::max(depths[*i], depths[*j]) + 1;
                     depths[*i] = gate_depth;
                     depths[*j] = gate_depth;

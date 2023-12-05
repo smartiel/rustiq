@@ -2,8 +2,8 @@ use crate::routines::decoding::information_set_decoding;
 /// This module contains the necessary methods to synthesize graph states
 use crate::structures::clifford_circuit::{CliffordCircuit, CliffordGate};
 use crate::structures::graph_state::GraphState;
-use crate::structures::metric::Metric;
 use crate::structures::pauli_like::PauliLike;
+
 #[derive(Clone, Copy)]
 enum Type {
     Cz,
@@ -70,7 +70,7 @@ fn gather_parities(
     return (parities, moves);
 }
 
-fn synthesize_graph_state_count(graph: &GraphState) -> CliffordCircuit {
+pub fn synthesize_graph_state_count(graph: &GraphState, niter: usize) -> CliffordCircuit {
     let mut circuit = CliffordCircuit::new(graph.n);
     for i in 0..graph.n {
         if i > 0 {
@@ -79,12 +79,12 @@ fn synthesize_graph_state_count(graph: &GraphState) -> CliffordCircuit {
             for j in 0..i {
                 target[j] = graph.adj[i][j];
             }
-            let solution = information_set_decoding(&mut parities, &mut target, 100);
+            let solution = information_set_decoding(&mut parities, &mut target, niter);
             let mut new_circuit = CliffordCircuit::new(graph.n);
             let moves: Vec<(Type, usize, usize)> = solution
                 .iter()
                 .enumerate()
-                .filter(|(a, b)| **b)
+                .filter(|(_a, b)| **b)
                 .map(|(a, _)| moves[a])
                 .collect();
             for (ty, index, qbit) in moves.iter() {
@@ -136,47 +136,4 @@ fn synthesize_graph_state_count(graph: &GraphState) -> CliffordCircuit {
         }
     }
     circuit
-}
-
-fn synthesize_graph_state_depth(graph: &GraphState) -> CliffordCircuit {
-    todo!()
-}
-
-pub fn synthesize_graph_state(graph: &GraphState, metric: &Metric) -> CliffordCircuit {
-    match metric {
-        Metric::DEPTH => synthesize_graph_state_depth(graph),
-        Metric::COUNT => synthesize_graph_state_count(graph),
-    }
-}
-
-#[cfg(test)]
-mod graph_state_tests {
-
-    use super::*;
-    #[test]
-    fn test_synthesis() {
-        let n = 10;
-        let gs = GraphState::random(n);
-        let circuit = synthesize_graph_state(&gs, &Metric::COUNT);
-        let mut graph = GraphState::new(n);
-        graph.conjugate_with_circuit(&circuit);
-        assert_eq!(gs.adj, graph.adj);
-    }
-    #[test]
-    fn test_synthesis_2() {
-        let n = 3;
-        let gs = GraphState {
-            adj: vec![
-                vec![true, true, true],
-                vec![true, true, true],
-                vec![true, true, false],
-            ],
-            n: 3,
-        };
-        let circuit = synthesize_graph_state(&gs, &Metric::COUNT);
-        let mut graph = GraphState::new(n);
-        graph.conjugate_with_circuit(&circuit);
-        println!("{:?}", circuit);
-        assert_eq!(gs.adj, graph.adj);
-    }
 }

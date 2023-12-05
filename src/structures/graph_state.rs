@@ -27,6 +27,12 @@ impl GraphState {
         }
         return gs;
     }
+    pub fn count_ones(&self) -> usize {
+        self.adj
+            .iter()
+            .map(|row| row.iter().filter(|a| **a).count())
+            .sum::<usize>()
+    }
 }
 impl PauliLike for GraphState {
     fn h(&mut self, i: usize) {

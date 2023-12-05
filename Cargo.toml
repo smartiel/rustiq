@@ -7,7 +7,12 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.2.4", features = ["derive", "cargo"] }
+pyo3 = { version = "0.18.2", features = ["extension-module"] }
 petgraph = "0.6.3"
 itertools = "0.10.5"
-pyo3 = { version = "0.18.2", features = ["extension-module"] }
-rand = "*"
+rand = "0.8.5"
+
+
+[[bin]]
+name = "graph_state"
+path = "src/graph_state.rs"

@@ -96,7 +96,7 @@ fn fix_permutation(solution: &Vec<bool>, permutation: &Vec<usize>) -> Vec<bool> 
 
 pub fn information_set_decoding(
     input_parities: &Vec<Vec<bool>>,
-    input_target: &mut Vec<bool>,
+    input_target: &Vec<bool>,
     ntries: usize,
 ) -> Vec<bool> {
     let mut best_solution: Option<Vec<bool>> = None;
