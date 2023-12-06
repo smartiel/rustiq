@@ -2,6 +2,14 @@
 
 # Rustiq: A quantum circuit compiler in Rust
 
+This library contains implementations of various quantum synthesis algorithms.
+It can handle:
+ - Graph state synthesis
+ - Synthesis of codiagonalization circuits for sets of commuting Pauli operators
+ - Pauli network synthesis (i.e. synthesis of sequences of Pauli rotations)
+
+
+
 ## Python library
 
 All the synthesis methods are binded in python and the repo can be installed via pip:
@@ -24,7 +32,7 @@ cargo build --release
 
 ### In python
 
-See the `examples/circuit_synthesis.py` file for an example.
+See the `examples` folder for examples of python usage (the file names are pretty self-explainatory)
 
 ### Using the command line tool
 
