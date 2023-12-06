@@ -1,4 +1,5 @@
 use super::structures::{CliffordCircuit, CliffordGate, GraphState, Metric, PauliSet};
+use super::synthesis::clifford::codiagonalization::codiagonalize as codiag;
 use super::synthesis::clifford::graph_state::synthesize_graph_state;
 use super::synthesis::pauli_network::{
     pauli_network_synthesis, pauli_network_synthesis_no_permutation,
@@ -77,7 +78,7 @@ pub fn greedy_pauli_network(
 }
 
 #[pyfunction]
-/// Single interface function for the 4 greedy algorithms for Pauli network synthesis
+/// Single interface function for the 2 algorithms for graph state synthesis
 /// The return value can be easily used on the python side
 pub fn graph_state_synthesis(
     graph_adj: Vec<Vec<bool>>,
@@ -92,10 +93,24 @@ pub fn graph_state_synthesis(
     circuit.gates.iter().map(|gate| gate.to_vec()).collect()
 }
 
+#[pyfunction]
+/// Single interface function for the 2 algorithms for codiagonalization
+/// The return value can be easily used on the python side
+pub fn codiagonalization(
+    paulis: Vec<String>,
+    metric: Metric,
+    niter: usize,
+) -> Vec<(String, Vec<usize>)> {
+    let mut pset = PauliSet::from_slice(&paulis);
+    let circuit = codiag(&mut pset, &metric, niter);
+    return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
+}
+
 #[pymodule]
 fn rustiq(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(greedy_pauli_network))?;
     m.add_wrapped(wrap_pyfunction!(graph_state_synthesis))?;
+    m.add_wrapped(wrap_pyfunction!(codiagonalization))?;
     m.add_class::<Metric>()?;
     Ok(())
 }
