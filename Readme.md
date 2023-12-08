@@ -34,7 +34,7 @@ cargo build --release
 
 See the `examples` folder for examples of python usage (the file names are pretty self-explainatory)
 
-### Using the command line tool
+### Using the command line tool (for Pauli network only)
 
 The directory `benchmarks/chem/` contains text files describing set of Pauli operators used in UCCSD Ansätze.
 The file names are pretty straightforward to parse.
