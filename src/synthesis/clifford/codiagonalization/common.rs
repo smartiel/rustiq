@@ -1,49 +1,7 @@
+use crate::routines::f2_linalg::*;
 use crate::structures::{CliffordCircuit, CliffordGate, PauliSet};
 
-pub fn rowop(table: &mut Vec<Vec<bool>>, i: usize, j: usize) {
-    if table.len() != 0 {
-        for k in 0..table.first().unwrap().len() {
-            table[j][k] ^= table[i][k];
-        }
-    }
-}
-
-pub fn colop(table: &mut Vec<Vec<bool>>, i: usize, j: usize) {
-    for k in 0..table.len() {
-        table[k][j] ^= table[k][i];
-    }
-}
-
-pub fn f2_rank(table: &Vec<Vec<bool>>) -> usize {
-    let mut rank = 0;
-    let mut table = table.clone();
-    let nrows = table.len();
-    let ncols = table.first().unwrap().len();
-    for i in 0..ncols {
-        let mut pivot = None;
-        for j in rank..nrows {
-            if table[j][i] {
-                pivot = Some(j);
-                break;
-            }
-        }
-        if let Some(pivot) = pivot {
-            if pivot != rank {
-                rowop(&mut table, pivot, rank);
-            }
-            for j in rank + 1..nrows {
-                if table[j][i] {
-                    rowop(&mut table, rank, j);
-                }
-            }
-            rank += 1;
-        }
-    }
-
-    rank
-}
-
-fn build_table(pauli_set: &PauliSet) -> (Vec<Vec<bool>>, Vec<Vec<bool>>) {
+pub fn build_table(pauli_set: &PauliSet) -> (Vec<Vec<bool>>, Vec<Vec<bool>>) {
     let n = pauli_set.n;
     let mut table_z = vec![vec![false; pauli_set.len()]; n];
     let mut table_x = vec![vec![false; pauli_set.len()]; n];
@@ -63,33 +21,6 @@ fn swap_rows(table: &mut Vec<Vec<bool>>, rows: &Vec<usize>) {
         new_table.push(table[*j].clone());
     }
     *table = new_table;
-}
-
-pub fn diagonalize(table: &mut Vec<Vec<bool>>, friend: &mut Vec<Vec<bool>>, rank: usize) {
-    let n = table.first().unwrap().len();
-    for i in 0..rank {
-        let mut pivot = None;
-        for j in i..n {
-            if table[i][j] {
-                pivot = Some(j);
-                break;
-            }
-        }
-        if let Some(pivot) = pivot {
-            if pivot != i {
-                colop(table, pivot, i);
-                colop(friend, pivot, i);
-            }
-            for j in 0..n {
-                if table[i][j] && j != i {
-                    colop(table, i, j);
-                    colop(friend, i, j);
-                }
-            }
-        } else {
-            panic!("This is not gooood!");
-        }
-    }
 }
 
 pub fn make_full_rank(
@@ -132,7 +63,6 @@ pub fn make_full_rank(
     swap_rows(&mut t_x, &fr_rows);
     swap_rows(&mut t_z, &fr_rows);
     diagonalize(&mut t_x, &mut t_z, rk);
-
     return (circuit, fr_rows, rk, (t_z, t_x));
 }
 pub fn permute_circuit(circuit: &CliffordCircuit, permutation: &Vec<usize>) -> CliffordCircuit {
@@ -156,6 +86,7 @@ pub fn permute_circuit(circuit: &CliffordCircuit, permutation: &Vec<usize>) -> C
     }
     permuted_circuit
 }
+
 #[cfg(test)]
 mod common_codiag_tests {
 

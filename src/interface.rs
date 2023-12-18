@@ -1,10 +1,13 @@
 use super::structures::{CliffordCircuit, CliffordGate, GraphState, Metric, PauliSet};
-use super::synthesis::clifford::codiagonalization::codiagonalize as codiag;
+use super::synthesis::clifford::codiagonalization::{
+    codiagonalize as codiag, codiagonalize_subsetwise,
+};
 use super::synthesis::clifford::graph_state::synthesize_graph_state;
+use super::synthesis::clifford::isometry::isometry_synthesis as iso_synth;
 use super::synthesis::pauli_network::{
     pauli_network_synthesis, pauli_network_synthesis_no_permutation,
 };
-use crate::structures::pauli_like::PauliLike;
+use crate::structures::{IsometryTableau, PauliLike};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
@@ -106,11 +109,43 @@ pub fn codiagonalization(
     return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
 }
 
+#[pyfunction]
+/// Single interface function for the subset-wise codiagonalization algorithm
+/// The return value can be easily used on the python side
+pub fn codiagonalization_sswise(paulis: Vec<String>, k: usize) -> Vec<(String, Vec<usize>)> {
+    let pset = PauliSet::from_slice(&paulis);
+    let circuit = codiagonalize_subsetwise(&pset, k);
+    return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
+}
+
+#[pyfunction]
+/// Single interface function for the subset-wise codiagonalization algorithm
+/// The return value can be easily used on the python side
+pub fn isometry_synthesis(
+    logicals: Vec<String>,
+    stabilizers: Vec<String>,
+    metric: Metric,
+    niter: usize,
+) -> Vec<(String, Vec<usize>)> {
+    let logicals = PauliSet::from_slice(&logicals);
+    let stabilizers = PauliSet::from_slice(&stabilizers);
+    let isometry = IsometryTableau {
+        n: logicals.len() / 2,
+        k: stabilizers.len(),
+        logicals,
+        stabilizers,
+    };
+    let circuit = iso_synth(&isometry, &metric, niter);
+    return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
+}
+
 #[pymodule]
 fn rustiq(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(greedy_pauli_network))?;
     m.add_wrapped(wrap_pyfunction!(graph_state_synthesis))?;
     m.add_wrapped(wrap_pyfunction!(codiagonalization))?;
+    m.add_wrapped(wrap_pyfunction!(codiagonalization_sswise))?;
+    m.add_wrapped(wrap_pyfunction!(isometry_synthesis))?;
     m.add_class::<Metric>()?;
     Ok(())
 }

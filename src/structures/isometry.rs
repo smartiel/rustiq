@@ -1,11 +1,11 @@
 use super::pauli_like::PauliLike;
 use super::pauli_set::PauliSet;
-
+use rand::Rng;
 pub struct IsometryTableau {
-    n: usize,
-    k: usize,
-    logicals: PauliSet,
-    stabilizers: PauliSet,
+    pub n: usize,
+    pub k: usize,
+    pub logicals: PauliSet,
+    pub stabilizers: PauliSet,
 }
 
 impl IsometryTableau {
@@ -33,6 +33,33 @@ impl IsometryTableau {
             logicals,
             stabilizers,
         }
+    }
+    pub fn random(n: usize, k: usize) -> Self {
+        let mut rng = rand::thread_rng();
+        let mut iso = Self::new(n, k);
+        for _ in 0..(n + k) * (n + k) {
+            let i = rng.gen::<usize>() % (n + k);
+            loop {
+                let j = rng.gen::<usize>() % (n + k);
+                if i == j {
+                    continue;
+                }
+                iso.cnot(i, j);
+                break;
+            }
+            for _ in 0..(n + k) {
+                let gate_i = rng.gen::<u8>() % 3;
+                if gate_i == 1 {
+                    let q = rng.gen::<usize>() % (n + k);
+                    iso.h(q);
+                }
+                if gate_i == 2 {
+                    let q = rng.gen::<usize>() % (n + k);
+                    iso.s(q);
+                }
+            }
+        }
+        return iso;
     }
 }
 

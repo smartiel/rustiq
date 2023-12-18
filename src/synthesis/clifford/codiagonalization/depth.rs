@@ -1,6 +1,7 @@
 use std::cmp::{max, min};
 
-use super::common::{colop, diagonalize, make_full_rank, permute_circuit, rowop};
+use super::common::{make_full_rank, permute_circuit};
+use crate::routines::f2_linalg::{colop, diagonalize, rowop};
 use crate::structures::{CliffordCircuit, CliffordGate, GraphState, Metric, PauliSet};
 use crate::synthesis::clifford::graph_state::synthesize_graph_state;
 use petgraph::algo::maximum_matching;
@@ -30,7 +31,7 @@ fn score_matrix(
         }
         return score_mat;
     }
-    let mut score_mat = vec![vec![0; table.len()]; table.len()];
+    let mut score_mat = vec![vec![0; rank]; rank];
     let k = rank;
     for i in 0..k {
         for j in 0..k {
@@ -255,6 +256,22 @@ mod codiag_depth_tests {
     fn test_thick() {
         for _ in 0..10 {
             let instance = random_instance(20, 50);
+            let mut copy_instance = instance.clone();
+            let circuit = codiagonalize_depth(&instance);
+            copy_instance.conjugate_with_circuit(&circuit);
+            for i in 0..instance.len() {
+                let (_, vec) = copy_instance.get_as_vec_bool(i);
+                for j in 0..instance.n {
+                    assert!(!vec[j]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_small() {
+        for _ in 0..10 {
+            let instance = random_instance(10, 6);
             let mut copy_instance = instance.clone();
             let circuit = codiagonalize_depth(&instance);
             copy_instance.conjugate_with_circuit(&circuit);

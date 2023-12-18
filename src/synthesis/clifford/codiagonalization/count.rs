@@ -1,5 +1,6 @@
-use super::common::{make_full_rank, permute_circuit, rowop};
+use super::common::{make_full_rank, permute_circuit};
 use crate::routines::decoding::information_set_decoding;
+use crate::routines::f2_linalg::rowop;
 use crate::structures::{CliffordCircuit, CliffordGate, GraphState, Metric, PauliSet};
 use crate::synthesis::clifford::graph_state::synthesize_graph_state;
 
