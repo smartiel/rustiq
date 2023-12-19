@@ -10,22 +10,22 @@ enum Type {
     SCnotS(usize, usize),
 }
 
-fn gather_parities(circuit: &CliffordCircuit, n: usize) -> (Vec<Vec<bool>>, Vec<Type>) {
+fn gather_parities(circuit: &CliffordCircuit, n: usize, k: usize) -> (Vec<Vec<bool>>, Vec<Type>) {
     let mut graph_state = GraphState::new(n);
-    let mut b = vec![vec![false; n]; n];
-    for i in 0..n {
+    let mut b = vec![vec![false; k]; n];
+    for i in 0..std::cmp::min(n, k) {
         b[i][i] = true;
     }
     let mut parities = Vec::new();
     let mut moves = Vec::new();
-    let mut ei = vec![false; 2 * n];
+    let mut ei = vec![false; n + k];
     for i in 0..n {
         ei[i] = true;
         parities.push(ei.clone());
         ei[i] = false;
         moves.push(Type::Cz(0, i));
     }
-    for i in 0..n {
+    for i in 0..k {
         ei[i + n] = true;
         parities.push(ei.clone());
         ei[i + n] = false;
@@ -100,19 +100,17 @@ fn graph_state_and_b_synthesis(
 ) -> CliffordCircuit {
     let graph = GraphState::from_adj(graph_adj.clone());
     let mut circuit = CliffordCircuit::new(graph.n);
-    // println!("Graph size: {}", graph.n);
-    // println!(
-    //     "B matrix shape: ({}, {})",
-    //     b_matrix.len(),
-    //     b_matrix.first().unwrap().len()
-    // );
+    let k = b_matrix.first().unwrap().len();
     for i in 0..graph.n {
         if i > 0 {
-            let (mut parities, moves) = gather_parities(&circuit, i);
-            let mut target = vec![false; 2 * i];
+            let parity_len = i + std::cmp::min(i, k);
+            let (mut parities, moves) = gather_parities(&circuit, i, std::cmp::min(i, k));
+            let mut target = vec![false; parity_len];
             for j in 0..i {
                 target[j] = graph.adj[i][j];
-                target[j + i] = b_matrix[i][j];
+                if j < k {
+                    target[j + i] = b_matrix[i][j];
+                }
             }
             let solution = information_set_decoding(&mut parities, &mut target, niter);
             let mut new_circuit = CliffordCircuit::new(graph.n);
@@ -185,15 +183,13 @@ pub fn isometry_count_synthesis(isometry: &IsometryTableau, niter: usize) -> Cli
     let (g_k, g_n, b, h_circuit) = decompose(&isometry);
     let (l, u, c, ops) = lu_facto(&transpose(&b));
     let mut output = CliffordCircuit::new(isometry.n + isometry.k);
-    // let g_n = mult_f2(&mult_f2(&c, &g_n), &transpose(&inverse_f2(&c)));
     let mut gn_as_gs = GraphState::from_adj(g_n);
     gn_as_gs.conjugate_with_circuit(&ops);
     let gn_circuit = graph_state_and_b_synthesis(&gn_as_gs.adj, &l, niter);
 
     let gk_circuit = graph_state_and_b_synthesis(&g_k, &transpose(&u), niter);
-    // let gn_circuit = graph_state_and_b_synthesis(&g_n, &l, niter);
     output.extend_with(&gk_circuit);
-    for qbit in 0..isometry.n + isometry.k {
+    for qbit in 0..isometry.n {
         output.gates.push(CliffordGate::H(qbit));
     }
     output.extend_with(&gn_circuit.dagger());
@@ -251,7 +247,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let n = 20;
         let k = 5;
-        let mut graph_adj = GraphState::random(n);
+        let mut graph_adj = GraphState::random(n + k);
         let mut b_matrix: Matrix = vec![vec![false; n]; n + k];
         for i in 0..n {
             b_matrix[i][i] = true;
@@ -271,6 +267,11 @@ mod tests {
                 _ => (),
             }
         }
+        println!("=== After de-synthesis ===");
+        println!("Graph:");
+        print_matrix(&graph_adj.adj);
+        println!("B:");
+        print_matrix(&b_matrix);
         for i in 0..n {
             assert_eq!(b_matrix[i][i], true);
             for l in 0..n {
@@ -279,12 +280,18 @@ mod tests {
                 }
             }
         }
-        for i in 0..n {
+        for i in n..n + k {
             for l in 0..n {
+                assert_eq!(b_matrix[i][l], false);
+            }
+        }
+        for i in 0..n + k {
+            for l in 0..n + k {
                 assert_eq!(graph_adj.adj[i][l], false);
             }
         }
     }
+
     fn print_matrix(matrix: &Matrix) {
         for row in matrix.iter() {
             for elem in row.iter() {
@@ -308,22 +315,6 @@ mod tests {
             let mut simulated = IsometryTableau::new(n, k);
             simulated.conjugate_with_circuit(&circuit);
             let (a, b, c, d) = extract_abcd(&simulated);
-            // println!("A = ");
-            // print_matrix(&a);
-            // println!("refA = ");
-            // print_matrix(&ref_a);
-            // println!("B = ");
-            // print_matrix(&b);
-            // println!("refB = ");
-            // print_matrix(&ref_b);
-            // println!("C = ");
-            // print_matrix(&c);
-            // println!("refC = ");
-            // print_matrix(&ref_c);
-            // println!("D = ");
-            // print_matrix(&d);
-            // println!("refD = ");
-            // print_matrix(&ref_d);
 
             assert_eq!(ref_a, a);
             assert_eq!(ref_b, b);
@@ -335,29 +326,16 @@ mod tests {
     fn test_isometry_count_synthesis() {
         for _ in 0..20 {
             let n = 20;
-            let k = 5;
-            let isometry = IsometryTableau::random(n, k);
-            let (ref_a, ref_b, ref_c, ref_d) = extract_abcd(&isometry);
+            let k = 10;
+            let mut isometry = IsometryTableau::random(n, k);
             let circuit = isometry_count_synthesis(&isometry, 1);
+            isometry.normalize_inplace();
+            let (ref_a, ref_b, ref_c, ref_d) = extract_abcd(&isometry);
             let mut simulated = IsometryTableau::new(n, k);
             simulated.conjugate_with_circuit(&circuit);
+            simulated.normalize_inplace();
+
             let (a, b, c, d) = extract_abcd(&simulated);
-            // println!("A = ");
-            // print_matrix(&a);
-            // println!("refA = ");
-            // print_matrix(&ref_a);
-            // println!("B = ");
-            // print_matrix(&b);
-            // println!("refB = ");
-            // print_matrix(&ref_b);
-            // println!("C = ");
-            // print_matrix(&c);
-            // println!("refC = ");
-            // print_matrix(&ref_c);
-            // println!("D = ");
-            // print_matrix(&d);
-            // println!("refD = ");
-            // print_matrix(&ref_d);
 
             assert_eq!(ref_a, a);
             assert_eq!(ref_b, b);

@@ -21,6 +21,30 @@ pub fn colop(table: &mut Matrix, i: usize, j: usize) {
     }
 }
 
+pub fn row_echelon(table: &mut Matrix, k: usize) {
+    let mut rank = 0;
+    for i in 0..table.first().unwrap().len() {
+        let mut pivot = None;
+        for j in rank..k {
+            if table[j][i] {
+                pivot = Some(j);
+                break;
+            }
+        }
+        if let Some(pivot) = pivot {
+            if pivot != rank {
+                rowop(table, pivot, rank);
+            }
+            for j in 0..table.len() {
+                if table[j][i] && j != rank {
+                    rowop(table, rank, j);
+                }
+            }
+            rank += 1;
+        }
+    }
+}
+
 pub fn diagonalize(table: &mut Matrix, friend: &mut Matrix, rank: usize) {
     let n = table.first().unwrap().len();
     for i in 0..rank {
@@ -191,7 +215,7 @@ fn f2_rank_square(matrix: &Matrix) -> usize {
         .collect();
     return f2_rank(&matrix);
 }
-fn print_matrix(matrix: &Matrix) {
+pub fn print_matrix(matrix: &Matrix) {
     for row in matrix.iter() {
         for elem in row.iter() {
             if *elem {

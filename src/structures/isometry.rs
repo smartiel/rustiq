@@ -1,5 +1,6 @@
 use super::pauli_like::PauliLike;
 use super::pauli_set::PauliSet;
+use crate::routines::f2_linalg::{print_matrix, row_echelon, Matrix};
 use rand::Rng;
 pub struct IsometryTableau {
     pub n: usize,
@@ -60,6 +61,32 @@ impl IsometryTableau {
             }
         }
         return iso;
+    }
+    /// Put the full Tableau in column echelon form
+    /// Warning: this method scratches the phases
+    pub fn normalize_inplace(&mut self) {
+        let mut table: Matrix = Vec::new();
+        // The first k rows are the stabilizers
+        for i in 0..self.k {
+            let (_, vec) = self.stabilizers.get_as_vec_bool(i);
+            table.push(vec);
+        }
+        // The next 2n rows are the logical operators
+        for i in 0..2 * self.n {
+            let (_, vec) = self.logicals.get_as_vec_bool(i);
+            table.push(vec);
+        }
+        row_echelon(&mut table, self.k);
+        let mut stabs = PauliSet::new(self.n + self.k);
+        for i in 0..self.k {
+            stabs.insert_vec_bool(&table[i], false);
+        }
+        let mut logicals = PauliSet::new(self.n + self.k);
+        for i in 0..2 * self.n {
+            logicals.insert_vec_bool(&table[self.k + i], false);
+        }
+        self.logicals = logicals;
+        self.stabilizers = stabs;
     }
 }
 
