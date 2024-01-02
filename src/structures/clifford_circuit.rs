@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CliffordGate {
     CNOT(usize, usize),
     CZ(usize, usize),

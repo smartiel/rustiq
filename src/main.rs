@@ -1,9 +1,7 @@
 extern crate clap;
 use clap::{command, Arg};
-use rustiq::structures::metric::Metric;
-use rustiq::synthesis::pauli_network::{
-    pauli_network_synthesis, pauli_network_synthesis_no_permutation,
-};
+use rustiq::structures::{Metric, PauliSet};
+use rustiq::synthesis::pauli_network::greedy_pauli_network;
 use std::env;
 use std::fs;
 use std::time::Instant;
@@ -52,11 +50,13 @@ fn main() {
     )
     .expect("Unknown metric");
     let start = Instant::now();
-    let result = if args.get_flag("keeporder") {
-        pauli_network_synthesis_no_permutation(pauli_operators, metric)
-    } else {
-        pauli_network_synthesis(pauli_operators, metric)
-    };
+    let result = greedy_pauli_network(
+        &mut PauliSet::from_slice(&pauli_operators),
+        &metric,
+        args.get_flag("keeporder)"),
+        0,
+    );
+
     let duration = start.elapsed();
     if args.get_flag("onlyinfo") {
         println!(

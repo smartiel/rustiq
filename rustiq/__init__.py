@@ -2,7 +2,7 @@ import networkx as nx
 from .rustiq import (
     Metric,
     graph_state_synthesis as rust_gs,
-    greedy_pauli_network,
+    pauli_network_synthesis as rust_pauli_network,
     codiagonalization as rust_codiag,
     codiagonalization_sswise as rust_sswise,
     isometry_synthesis as rust_isometry,
@@ -11,16 +11,41 @@ from .rustiq import (
 __all__ = [
     "Metric",
     "graph_state_synthesis",
-    "greedy_pauli_network",
+    "pauli_network_synthesis",
     "codiagonalization",
     "clifford_synthesis",
 ]
+
+
+def pauli_network_synthesis(
+    paulis, metric, check=False, preserve_order=True, nshuffles=0
+):
+    """
+    Synthesize a circuit implementing a Pauli network for a given set of Pauli operators.
+
+    Args:
+        paulis (list): List of Pauli operators (as strings).
+        metric (Metric): The metric to minimize.
+        preserve_order (optional, bool): Whether to preserve the order of the Pauli operators. Default is True.
+        nshuffles (optional, int): Number of qbit ordering shuffles to perform. Default is 0.
+
+    Returns:
+        list: The synthesized circuit.
+    """
+    return rust_pauli_network(paulis, metric, preserve_order, check, nshuffles)
 
 
 def graph_state_synthesis(graph, metric, syndrome_iter=None):
     """
     Synthesize a circuit preparing a given graph state specified by a networkx graph.
 
+    Args:
+        graph (nx.Graph): A graph (networkx object).
+        metric (Metric): The metric to minimize.
+        syndrome_iter (optional, int): The number of syndrome decoding iteration used in the ISD solver
+          (for `Metric.COUNT` only). Default is 0.
+    Returns:
+        list: The synthesized circuit.
     """
     syndrome_iter = syndrome_iter or 1
     adj = nx.to_numpy_array(graph) < 0.5
@@ -29,25 +54,53 @@ def graph_state_synthesis(graph, metric, syndrome_iter=None):
 
 def codiagonalization(paulis, metric, syndrome_iter=None):
     """
-    Synthesize a circuit preparing a codiagonalizing a given set of pairwise commuting Pauli operators
+    Synthesize a circuit preparing a codiagonalization Clifford circuit for a given set of
+    pairwise commuting Pauli operators.
 
+    Args:
+        paulis (list): List of the Pauli operators to co-diagonalize (as strings).
+        metric (Metric): The metric to minimize.
+        syndrome_iter (optional, int): The number of syndrome decoding iteration used in the ISD solver
+          (for `Metric.COUNT` only). Default is 0.
+
+    Returns:
+        list: The synthesized circuit.
     """
     syndrome_iter = syndrome_iter or 1
     return rust_codiag(paulis, metric, syndrome_iter)
 
 
-def codiagonalization_sswise(paulis, k=2):
+def codiagonalization_sswise(paulis):
     """
-    Synthesize a circuit preparing a codiagonalizing a given set of pairwise commuting Pauli operators
+    Synthesize a circuit preparing a codiagonalization Clifford circuit for a given set of
+    pairwise commuting Pauli operators.
 
+    This is the heuristic of the paper "A Generic Compilation Strategy for the Unitary
+    Coupled Cluster Ansatz".
+    It is here for comparison purposes with the `codiagonalization` method .
+
+    Args:
+        paulis (list): List of the Pauli operators to co-diagonalize (as strings).
+
+    Returns:
+        list: The synthesized circuit.
     """
-    return rust_sswise(paulis, k)
+    return rust_sswise(paulis, 2)
 
 
-def clifford_synthesis(logicals, metric=Metric.COUNT, syndrome_iter=None):
+def clifford_synthesis(logicals, syndrome_iter=None):
     """
-    Synthesize a circuit preparing a codiagonalizing a given set of pairwise commuting Pauli operators
+    Synthesize a Clifford circuit implementing a target Clifford operator specified by its
+    tableau.
+    The tableau is specified by a list of operators (as strings). The first (resp. second) half of the list corresponding
+    to the images of `Zi` (resp. `Xi`) operators.
 
+    Args:
+        logicals (list): The tableau.
+        syndrome_iter (optional, int): The number of syndrome decoding iteration used in the ISD solver. Default is 0.
+
+    Returns:
+        list: The synthesized circuit.
     """
     syndrome_iter = syndrome_iter or 1
-    return rust_isometry(logicals, [], metric, syndrome_iter)
+    return rust_isometry(logicals, [], Metric.COUNT, syndrome_iter)

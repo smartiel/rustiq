@@ -1,6 +1,5 @@
 use petgraph::algo::maximum_matching;
 use petgraph::prelude::*;
-use pyo3::prelude::*;
 use std::collections::HashMap;
 
 use crate::structures::clifford_circuit::{CliffordCircuit, CliffordGate};
@@ -319,18 +318,13 @@ pub fn single_synthesis_step(bucket: &mut PauliSet, metric: &Metric) -> Clifford
     };
 }
 
-/// Builds a Pauli network for a collection of Pauli operators
-#[pyfunction]
-pub fn pauli_network_synthesis(axes: Vec<String>, metric: Metric) -> CliffordCircuit {
-    if axes.is_empty() {
+pub fn pauli_network_synthesis(bucket: &mut PauliSet, metric: &Metric) -> CliffordCircuit {
+    if bucket.len() == 0 {
         return CliffordCircuit::new(0);
     }
-    let nqbits = axes[0].len();
-    let mut bucket = PauliSet::new(nqbits);
+    let nqbits = bucket.n;
     let mut output = CliffordCircuit::new(nqbits);
-    for axis in axes {
-        bucket.insert(&axis, false);
-    }
+
     loop {
         bucket.support_size_sort();
         while bucket.support_size(0) == 1 {
@@ -339,7 +333,7 @@ pub fn pauli_network_synthesis(axes: Vec<String>, metric: Metric) -> CliffordCir
         if bucket.len() == 0 {
             break;
         }
-        let circuit_piece = single_synthesis_step(&mut bucket, &metric);
+        let circuit_piece = single_synthesis_step(bucket, &metric);
         output.extend_with(&circuit_piece);
     }
     return output;
@@ -394,15 +388,17 @@ mod greedy_synthesis_tests {
 
     #[test]
     fn count_synthesis() {
-        let input = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
-        let circuit = pauli_network_synthesis(input.clone(), Metric::COUNT);
+        let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
+        let mut input = PauliSet::from_slice(&axes);
+        let circuit = pauli_network_synthesis(&mut input, &Metric::COUNT);
         println!("{circuit:?}");
-        assert!(check_circuit(&input, &circuit))
+        assert!(check_circuit(&axes, &circuit))
     }
     #[test]
     fn depth_synthesis() {
-        let input = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
-        let circuit = pauli_network_synthesis(input.clone(), Metric::DEPTH);
-        assert!(check_circuit(&input, &circuit))
+        let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
+        let mut input = PauliSet::from_slice(&axes);
+        let circuit = pauli_network_synthesis(&mut input, &Metric::DEPTH);
+        println!("{circuit:?}");
     }
 }

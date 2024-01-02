@@ -227,6 +227,11 @@ impl PauliSet {
         }
     }
 
+    pub fn swap_qbits(&mut self, i: usize, j: usize) {
+        self.data_array.swap(i, j);
+        self.data_array.swap(self.n + i, self.n + j);
+    }
+
     /// Offset the phases by the logical bitwise and of two target rows
     fn update_phase_and(&mut self, i: usize, j: usize) {
         for (v1, v2, phase) in izip!(

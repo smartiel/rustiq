@@ -1,5 +1,5 @@
 import numpy as np
-from rustiq import greedy_pauli_network, Metric
+from rustiq import pauli_network_synthesis, Metric
 
 np.random.seed(1)
 
@@ -26,17 +26,23 @@ def cnot_count(circ):
 
 
 # Optimizing COUNT, not preserving order
-circuit = greedy_pauli_network(pauli_sequence, Metric.COUNT, False, check=True)
-print(cnot_count(circuit), cnot_depth(circuit))
+circuit = pauli_network_synthesis(pauli_sequence, Metric.COUNT, False)
+print("Count no order:", cnot_count(circuit), cnot_depth(circuit))
 
 # Optimizing DEPTH, not preserving order
-circuit = greedy_pauli_network(pauli_sequence, Metric.DEPTH, False, check=True)
-print(cnot_count(circuit), cnot_depth(circuit))
+circuit = pauli_network_synthesis(pauli_sequence, Metric.DEPTH, False)
+print("Depth no order:", cnot_count(circuit), cnot_depth(circuit))
 
 # Optimizing COUNT, preserving order
-circuit = greedy_pauli_network(pauli_sequence, Metric.COUNT, True, check=True)
-print(cnot_count(circuit), cnot_depth(circuit))
+circuit = pauli_network_synthesis(pauli_sequence, Metric.COUNT, True)
+print("Count order   :", cnot_count(circuit), cnot_depth(circuit))
 
 # Optimizing DEPTH, preserving order
-circuit = greedy_pauli_network(pauli_sequence, Metric.DEPTH, True, check=True)
-print(cnot_count(circuit), cnot_depth(circuit))
+circuit = pauli_network_synthesis(pauli_sequence, Metric.DEPTH, True)
+print("Depth order   :", cnot_count(circuit), cnot_depth(circuit))
+
+
+# Pushing the optimization further by randomizing the qbit ordering:
+circuit = pauli_network_synthesis(pauli_sequence, Metric.DEPTH, False, nshuffles=40)
+print("# With 40 qubit shuffling (40 times slower):")
+print("Depth no order:", cnot_count(circuit), cnot_depth(circuit))

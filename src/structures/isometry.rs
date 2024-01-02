@@ -1,6 +1,6 @@
 use super::pauli_like::PauliLike;
 use super::pauli_set::PauliSet;
-use crate::routines::f2_linalg::{print_matrix, row_echelon, Matrix};
+use crate::routines::f2_linalg::{row_echelon, Matrix};
 use rand::Rng;
 pub struct IsometryTableau {
     pub n: usize,

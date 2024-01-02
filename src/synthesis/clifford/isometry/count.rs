@@ -1,6 +1,6 @@
 use super::common::decompose;
 use crate::routines::decoding::information_set_decoding;
-use crate::routines::f2_linalg::{inverse_f2, lu_facto, mult_f2, rowop, transpose, Matrix};
+use crate::routines::f2_linalg::{lu_facto, rowop, transpose, Matrix};
 use crate::structures::{CliffordCircuit, CliffordGate, GraphState, IsometryTableau, PauliLike};
 
 #[derive(Clone, Copy)]
@@ -181,7 +181,7 @@ fn graph_state_and_b_synthesis(
 
 pub fn isometry_count_synthesis(isometry: &IsometryTableau, niter: usize) -> CliffordCircuit {
     let (g_k, g_n, b, h_circuit) = decompose(&isometry);
-    let (l, u, c, ops) = lu_facto(&transpose(&b));
+    let (l, u, _, ops) = lu_facto(&transpose(&b));
     let mut output = CliffordCircuit::new(isometry.n + isometry.k);
     let mut gn_as_gs = GraphState::from_adj(g_n);
     gn_as_gs.conjugate_with_circuit(&ops);

@@ -9,5 +9,10 @@ pub fn isometry_synthesis(
     metric: &Metric,
     niter: usize,
 ) -> CliffordCircuit {
-    return isometry_count_synthesis(isometry, niter);
+    match metric {
+        Metric::COUNT => {
+            return isometry_count_synthesis(isometry, niter);
+        }
+        _ => panic!("Isometry synthesis targeting depth is not available (yet!)"),
+    }
 }

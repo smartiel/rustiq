@@ -1,4 +1,4 @@
-from rustiq import codiagonalization, Metric
+from rustiq import codiagonalization, codiagonalization_sswise, Metric
 import numpy as np
 
 
@@ -45,15 +45,18 @@ def generate_random_commuting(n, m):
     ]
 
 
-instance = generate_random_commuting(60, 30)
+instance = generate_random_commuting(10, 6)
 circuit = codiagonalization(instance, Metric.COUNT)
-print(ent_count(circuit), ent_depth(circuit))
+print("Count minimization: ", ent_count(circuit), ent_depth(circuit))
 
 circuit = codiagonalization(instance, Metric.DEPTH)
-print(ent_count(circuit), ent_depth(circuit))
+print("Depth minimization: ", ent_count(circuit), ent_depth(circuit))
+
+circuit = codiagonalization_sswise(instance)
+print("Cowtan et al method:", ent_count(circuit), ent_depth(circuit))
 
 
-# Increasing the number of iterations in the syndrome decoding (only for count):
+print("Pushing the syndrome decoding:")
 for niter in [1, 10, 20, 50, 100]:
     circuit = codiagonalization(instance, Metric.COUNT, niter)
     print(niter, ent_count(circuit))

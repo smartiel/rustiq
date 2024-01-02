@@ -4,9 +4,7 @@ use super::synthesis::clifford::codiagonalization::{
 };
 use super::synthesis::clifford::graph_state::synthesize_graph_state;
 use super::synthesis::clifford::isometry::isometry_synthesis as iso_synth;
-use super::synthesis::pauli_network::{
-    pauli_network_synthesis, pauli_network_synthesis_no_permutation,
-};
+use super::synthesis::pauli_network::greedy_pauli_network;
 use crate::structures::{IsometryTableau, PauliLike};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
@@ -63,17 +61,15 @@ fn check_circuit(input: &[String], circuit: &CliffordCircuit) {
 #[pyfunction]
 /// Single interface function for the 4 greedy algorithms for Pauli network synthesis
 /// The return value can be easily used on the python side
-pub fn greedy_pauli_network(
+pub fn pauli_network_synthesis(
     operator_sequence: Vec<String>,
     metric: Metric,
     preserve_order: bool,
     check: bool,
+    nshuffles: usize,
 ) -> Vec<(String, Vec<usize>)> {
-    let circuit = if preserve_order {
-        pauli_network_synthesis_no_permutation(operator_sequence.clone(), metric)
-    } else {
-        pauli_network_synthesis(operator_sequence.clone(), metric)
-    };
+    let mut bucket = PauliSet::from_slice(&operator_sequence);
+    let circuit = greedy_pauli_network(&mut bucket, &metric, preserve_order, nshuffles);
     if check {
         check_circuit(&operator_sequence, &circuit);
     }
@@ -141,7 +137,7 @@ pub fn isometry_synthesis(
 
 #[pymodule]
 fn rustiq(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
-    m.add_wrapped(wrap_pyfunction!(greedy_pauli_network))?;
+    m.add_wrapped(wrap_pyfunction!(pauli_network_synthesis))?;
     m.add_wrapped(wrap_pyfunction!(graph_state_synthesis))?;
     m.add_wrapped(wrap_pyfunction!(codiagonalization))?;
     m.add_wrapped(wrap_pyfunction!(codiagonalization_sswise))?;

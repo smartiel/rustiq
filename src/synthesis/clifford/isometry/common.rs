@@ -1,5 +1,5 @@
 use crate::routines::f2_linalg::*;
-use crate::structures::{CliffordCircuit, CliffordGate, GraphState, IsometryTableau};
+use crate::structures::{CliffordCircuit, CliffordGate, IsometryTableau};
 
 pub fn extract_abcd(isometry: &IsometryTableau) -> (Matrix, Matrix, Matrix, Matrix) {
     let mut a = vec![vec![false; isometry.n + isometry.k]; isometry.n + isometry.k];
@@ -82,7 +82,7 @@ mod tests {
         let k = 1; // Size of the extension
         let isometry = IsometryTableau::random(n, k);
 
-        let (gk, gn, b_k, piece) = decompose(&isometry);
+        let (gk, gn, b_k, _) = decompose(&isometry);
 
         assert_eq!(gk.len(), n);
         assert!(gk.iter().all(|row| row.len() == n));
