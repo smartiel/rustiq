@@ -318,7 +318,11 @@ pub fn single_synthesis_step(bucket: &mut PauliSet, metric: &Metric) -> Clifford
     };
 }
 
-pub fn pauli_network_synthesis(bucket: &mut PauliSet, metric: &Metric) -> CliffordCircuit {
+pub fn pauli_network_synthesis(
+    bucket: &mut PauliSet,
+    metric: &Metric,
+    skip_sort: bool,
+) -> CliffordCircuit {
     if bucket.len() == 0 {
         return CliffordCircuit::new(0);
     }
@@ -326,7 +330,9 @@ pub fn pauli_network_synthesis(bucket: &mut PauliSet, metric: &Metric) -> Cliffo
     let mut output = CliffordCircuit::new(nqbits);
 
     loop {
-        bucket.support_size_sort();
+        if !skip_sort {
+            bucket.support_size_sort();
+        }
         while bucket.support_size(0) == 1 {
             bucket.pop();
         }
@@ -390,15 +396,33 @@ mod greedy_synthesis_tests {
     fn count_synthesis() {
         let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
         let mut input = PauliSet::from_slice(&axes);
-        let circuit = pauli_network_synthesis(&mut input, &Metric::COUNT);
+        let circuit = pauli_network_synthesis(&mut input, &Metric::COUNT, false);
         println!("{circuit:?}");
         assert!(check_circuit(&axes, &circuit))
     }
+
     #[test]
     fn depth_synthesis() {
         let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
         let mut input = PauliSet::from_slice(&axes);
-        let circuit = pauli_network_synthesis(&mut input, &Metric::DEPTH);
+        let circuit = pauli_network_synthesis(&mut input, &Metric::DEPTH, false);
+        println!("{circuit:?}");
+    }
+
+    #[test]
+    fn count_synthesis_ss() {
+        let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
+        let mut input = PauliSet::from_slice(&axes);
+        let circuit = pauli_network_synthesis(&mut input, &Metric::COUNT, true);
+        println!("{circuit:?}");
+        assert!(check_circuit(&axes, &circuit))
+    }
+
+    #[test]
+    fn depth_synthesis_ss() {
+        let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
+        let mut input = PauliSet::from_slice(&axes);
+        let circuit = pauli_network_synthesis(&mut input, &Metric::DEPTH, true);
         println!("{circuit:?}");
     }
 }

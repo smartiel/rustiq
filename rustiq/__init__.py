@@ -18,7 +18,12 @@ __all__ = [
 
 
 def pauli_network_synthesis(
-    paulis, metric, check=False, preserve_order=True, nshuffles=0
+    paulis,
+    metric,
+    preserve_order=True,
+    nshuffles=0,
+    skip_sort=False,
+    fix_clifford=False,
 ):
     """
     Synthesize a circuit implementing a Pauli network for a given set of Pauli operators.
@@ -28,11 +33,16 @@ def pauli_network_synthesis(
         metric (Metric): The metric to minimize.
         preserve_order (optional, bool): Whether to preserve the order of the Pauli operators. Default is True.
         nshuffles (optional, int): Number of qbit ordering shuffles to perform. Default is 0.
+        skip_sort (optional, bool): Whether to skip the sorting of the Pauli operators (by hamming weight).
+          If set to True, the algorithm might fail to converge.
+        fix_clifford (optional, bool): Whether to fix the final Clifford operator. Defaults to false.
 
     Returns:
         list: The synthesized circuit.
     """
-    return rust_pauli_network(paulis, metric, preserve_order, check, nshuffles)
+    return rust_pauli_network(
+        paulis, metric, preserve_order, False, nshuffles, skip_sort, fix_clifford
+    )
 
 
 def graph_state_synthesis(graph, metric, syndrome_iter=None):

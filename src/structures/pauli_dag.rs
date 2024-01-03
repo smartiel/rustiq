@@ -87,7 +87,7 @@ impl PauliDag {
     }
 
     /// Performs a single synthesis step
-    pub fn single_step_synthesis(&mut self, metric: &Metric) -> CliffordCircuit {
+    pub fn single_step_synthesis(&mut self, metric: &Metric, skip_sort: bool) -> CliffordCircuit {
         self.front_layer.support_size_sort();
         let circuit = single_synthesis_step(&mut self.front_layer, metric);
         // Updating the global set of operators

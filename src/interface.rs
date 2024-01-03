@@ -67,9 +67,18 @@ pub fn pauli_network_synthesis(
     preserve_order: bool,
     check: bool,
     nshuffles: usize,
+    skip_sort: bool,
+    fix_clifford: bool,
 ) -> Vec<(String, Vec<usize>)> {
     let mut bucket = PauliSet::from_slice(&operator_sequence);
-    let circuit = greedy_pauli_network(&mut bucket, &metric, preserve_order, nshuffles);
+    let circuit = greedy_pauli_network(
+        &mut bucket,
+        &metric,
+        preserve_order,
+        nshuffles,
+        skip_sort,
+        fix_clifford,
+    );
     if check {
         check_circuit(&operator_sequence, &circuit);
     }

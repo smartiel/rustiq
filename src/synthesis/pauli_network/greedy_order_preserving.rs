@@ -4,11 +4,12 @@ use crate::structures::{CliffordCircuit, Metric, PauliDag, PauliLike, PauliSet};
 pub fn pauli_network_synthesis_no_permutation(
     axes: &mut PauliSet,
     metric: &Metric,
+    skip_sort: bool,
 ) -> CliffordCircuit {
     let mut dag = PauliDag::from_pauli_set(axes.clone());
     let mut circuit = CliffordCircuit::new(dag.pauli_set.n);
     while dag.front_layer.len() > 0 {
-        circuit.extend_with(&dag.single_step_synthesis(&metric));
+        circuit.extend_with(&dag.single_step_synthesis(&metric, skip_sort));
     }
     return circuit;
 }
@@ -62,7 +63,7 @@ mod greedy_synthesis_tests {
     fn count_synthesis() {
         let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
         let mut input = PauliSet::from_slice(&axes);
-        let circuit = pauli_network_synthesis_no_permutation(&mut input, &Metric::COUNT);
+        let circuit = pauli_network_synthesis_no_permutation(&mut input, &Metric::COUNT, false);
         println!("{circuit:?}");
         assert!(check_circuit(&axes, &circuit))
     }
@@ -70,7 +71,24 @@ mod greedy_synthesis_tests {
     fn depth_synthesis() {
         let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
         let mut input = PauliSet::from_slice(&axes);
-        let circuit = pauli_network_synthesis_no_permutation(&mut input, &Metric::DEPTH);
+        let circuit = pauli_network_synthesis_no_permutation(&mut input, &Metric::DEPTH, false);
+        println!("{circuit:?}");
+        assert!(check_circuit(&axes, &circuit))
+    }
+
+    #[test]
+    fn count_synthesis_ss() {
+        let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
+        let mut input = PauliSet::from_slice(&axes);
+        let circuit = pauli_network_synthesis_no_permutation(&mut input, &Metric::COUNT, true);
+        println!("{circuit:?}");
+        assert!(check_circuit(&axes, &circuit))
+    }
+    #[test]
+    fn depth_synthesis_ss() {
+        let axes = vec!["XX".to_owned(), "ZZ".to_owned(), "YY".to_owned()];
+        let mut input = PauliSet::from_slice(&axes);
+        let circuit = pauli_network_synthesis_no_permutation(&mut input, &Metric::DEPTH, true);
         println!("{circuit:?}");
         assert!(check_circuit(&axes, &circuit))
     }

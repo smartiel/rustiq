@@ -55,6 +55,8 @@ fn main() {
         &metric,
         args.get_flag("keeporder)"),
         0,
+        false,
+        false,
     );
 
     let duration = start.elapsed();

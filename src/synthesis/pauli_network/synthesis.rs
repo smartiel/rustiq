@@ -1,6 +1,8 @@
 use super::greedy_order_preserving::pauli_network_synthesis_no_permutation;
 use super::greedy_pauli_network::pauli_network_synthesis;
-use crate::structures::{CliffordCircuit, CliffordGate, Metric, PauliSet};
+use crate::structures::PauliLike;
+use crate::structures::{CliffordCircuit, CliffordGate, IsometryTableau, Metric, PauliSet};
+use crate::synthesis::clifford::isometry::isometry_synthesis;
 use rand::thread_rng;
 use rand::Rng;
 
@@ -40,22 +42,30 @@ pub fn greedy_pauli_network(
     metric: &Metric,
     preserve_order: bool,
     nshuffles: usize,
+    skip_sort: bool,
+    fix_clifford: bool,
 ) -> CliffordCircuit {
     let synth = if preserve_order {
         pauli_network_synthesis_no_permutation
     } else {
         pauli_network_synthesis
     };
-    let mut circuit = synth(operator_sequence, metric);
+    let mut circuit = synth(&mut operator_sequence.clone(), metric, skip_sort);
     let mut cost = metric.on_circuit(&circuit);
     for _ in 0..nshuffles {
         let permutation = permute_input(operator_sequence);
-        let new_circuit = synth(operator_sequence, metric);
+        let new_circuit = synth(&mut operator_sequence.clone(), metric, skip_sort);
         let new_cost = metric.on_circuit(&new_circuit);
         if new_cost < cost {
             cost = new_cost;
             circuit = permute_circuit(&new_circuit, &permutation);
         }
+    }
+    if fix_clifford {
+        let mut tableau = IsometryTableau::new(circuit.nqbits, 0);
+        tableau.conjugate_with_circuit(&circuit.dagger());
+        let fix = isometry_synthesis(&mut tableau, &Metric::COUNT, 100);
+        circuit.extend_with(&fix);
     }
     return circuit;
 }
@@ -72,8 +82,14 @@ mod tests {
         let preserve_order = true;
         let nshuffles = 50;
 
-        let result =
-            greedy_pauli_network(&mut operator_sequence, &metric, preserve_order, nshuffles);
+        let result = greedy_pauli_network(
+            &mut operator_sequence,
+            &metric,
+            preserve_order,
+            nshuffles,
+            false,
+            false,
+        );
         assert_eq!(result.gates[0], CliffordGate::CNOT(1, 0));
     }
 }

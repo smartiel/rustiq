@@ -42,6 +42,26 @@ circuit = pauli_network_synthesis(pauli_sequence, Metric.DEPTH, True)
 print("Depth order   :", cnot_count(circuit), cnot_depth(circuit))
 
 
+# Optimizing COUNT, not preserving order, fixing the final clifford operator
+circuit = pauli_network_synthesis(
+    pauli_sequence, Metric.COUNT, False, fix_clifford=True
+)
+print("Count no order (fixed):", cnot_count(circuit), cnot_depth(circuit))
+
+# Optimizing DEPTH, not preserving order
+circuit = pauli_network_synthesis(
+    pauli_sequence, Metric.DEPTH, False, fix_clifford=True
+)
+print("Depth no order (fixed):", cnot_count(circuit), cnot_depth(circuit))
+
+# Optimizing COUNT, preserving order
+circuit = pauli_network_synthesis(pauli_sequence, Metric.COUNT, True, fix_clifford=True)
+print("Count order    (fixed):", cnot_count(circuit), cnot_depth(circuit))
+
+# Optimizing DEPTH, preserving order
+circuit = pauli_network_synthesis(pauli_sequence, Metric.DEPTH, True, fix_clifford=True)
+print("Depth order    (fixed):", cnot_count(circuit), cnot_depth(circuit))
+
 # Pushing the optimization further by randomizing the qbit ordering:
 circuit = pauli_network_synthesis(pauli_sequence, Metric.DEPTH, False, nshuffles=40)
 print("# With 40 qubit shuffling (40 times slower):")
