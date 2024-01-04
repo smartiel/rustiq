@@ -16,3 +16,9 @@ rand = "0.8.5"
 [[bin]]
 name = "graph_state"
 path = "src/graph_state.rs"
+
+
+
+[[bin]]
+name = "pauli_network"
+path = "src/pauli_network.rs"
