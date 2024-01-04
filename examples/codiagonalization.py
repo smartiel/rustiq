@@ -1,19 +1,6 @@
 from rustiq import codiagonalization, codiagonalization_sswise, Metric
+from rustiq.utils import entangling_count, entangling_depth
 import numpy as np
-
-
-def ent_depth(circ):
-    depths = {}
-    for gate, qbits in circ:
-        if gate in ["CNOT", "CZ"]:
-            gate_depth = max(depths.get(qbits[0], 0), depths.get(qbits[1], 0)) + 1
-            for qbit in qbits:
-                depths[qbit] = gate_depth
-    return max(depths.values() or [0])
-
-
-def ent_count(circ):
-    return sum(gate in ["CNOT", "CZ"] for gate, _ in circ)
 
 
 PAULI = {
@@ -47,16 +34,16 @@ def generate_random_commuting(n, m):
 
 instance = generate_random_commuting(10, 6)
 circuit = codiagonalization(instance, Metric.COUNT)
-print("Count minimization: ", ent_count(circuit), ent_depth(circuit))
+print("Count minimization: ", entangling_count(circuit), entangling_depth(circuit))
 
 circuit = codiagonalization(instance, Metric.DEPTH)
-print("Depth minimization: ", ent_count(circuit), ent_depth(circuit))
+print("Depth minimization: ", entangling_count(circuit), entangling_depth(circuit))
 
 circuit = codiagonalization_sswise(instance)
-print("Cowtan et al method:", ent_count(circuit), ent_depth(circuit))
+print("Cowtan et al method:", entangling_count(circuit), entangling_depth(circuit))
 
 
 print("Pushing the syndrome decoding:")
 for niter in [1, 10, 20, 50, 100]:
     circuit = codiagonalization(instance, Metric.COUNT, niter)
-    print(niter, ent_count(circuit))
+    print(niter, entangling_count(circuit))

@@ -1,7 +1,7 @@
 use rand::Rng;
 use rustiq::structures::metric::Metric;
 use rustiq::synthesis::pauli_network::greedy_pauli_network;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 const PAULIS: [char; 4] = ['I', 'X', 'Y', 'Z'];
 
 fn random_instance(n: usize, m: usize) -> Vec<String> {
