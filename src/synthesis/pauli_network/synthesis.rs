@@ -53,8 +53,9 @@ pub fn greedy_pauli_network(
     let mut circuit = synth(&mut operator_sequence.clone(), metric, skip_sort);
     let mut cost = metric.on_circuit(&circuit);
     for _ in 0..nshuffles {
-        let permutation = permute_input(operator_sequence);
-        let new_circuit = synth(&mut operator_sequence.clone(), metric, skip_sort);
+        let mut pset = operator_sequence.clone();
+        let permutation = permute_input(&mut pset);
+        let new_circuit = synth(&mut pset, metric, skip_sort);
         let new_cost = metric.on_circuit(&new_circuit);
         if new_cost < cost {
             cost = new_cost;
