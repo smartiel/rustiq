@@ -12,6 +12,9 @@ use rand::Rng;
 fn permute_input(pset: &mut PauliSet) -> Vec<usize> {
     let mut rng = thread_rng();
     let mut permutation = (0..pset.n).collect::<Vec<usize>>();
+    if pset.n <= 1 {
+        return permutation;
+    }
     for _ in 0..pset.n * pset.n {
         let i = rng.gen_range(0..pset.n - 1);
         let j = rng.gen_range(i + 1..pset.n);
@@ -65,6 +68,7 @@ pub fn check_circuit(input: &[String], circuit: &CliffordCircuit) {
         input.len()
     );
 }
+
 pub fn greedy_pauli_network(
     operator_sequence: &mut PauliSet,
     metric: &Metric,
