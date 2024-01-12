@@ -24,6 +24,7 @@ def pauli_network_synthesis(
     nshuffles=0,
     skip_sort=False,
     fix_clifford=False,
+    check=False,
 ):
     """
     Synthesize a circuit implementing a Pauli network for a given set of Pauli operators.
@@ -41,7 +42,7 @@ def pauli_network_synthesis(
         list: The synthesized circuit.
     """
     return rust_pauli_network(
-        paulis, metric, preserve_order, False, nshuffles, skip_sort, fix_clifford
+        paulis, metric, preserve_order, check, nshuffles, skip_sort, fix_clifford
     )
 
 
