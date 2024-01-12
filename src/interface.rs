@@ -1,62 +1,13 @@
-use super::structures::{CliffordCircuit, CliffordGate, GraphState, Metric, PauliSet};
+use super::structures::{CliffordGate, GraphState, Metric, PauliSet};
 use super::synthesis::clifford::codiagonalization::{
     codiagonalize as codiag, codiagonalize_subsetwise,
 };
 use super::synthesis::clifford::graph_state::synthesize_graph_state;
 use super::synthesis::clifford::isometry::isometry_synthesis as iso_synth;
-use super::synthesis::pauli_network::greedy_pauli_network;
+use super::synthesis::pauli_network::{check_circuit, greedy_pauli_network};
 use crate::structures::{IsometryTableau, PauliLike};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
-
-use std::collections::HashSet;
-fn check_circuit(input: &[String], circuit: &CliffordCircuit) {
-    let mut hit_map: HashSet<usize> = HashSet::new();
-    let mut bucket = PauliSet::from_slice(input);
-    for i in 0..bucket.len() {
-        if bucket.support_size(i) == 1 {
-            hit_map.insert(i);
-        }
-    }
-    for gate in circuit.gates.iter() {
-        match gate {
-            CliffordGate::SqrtX(i) => {
-                bucket.sqrt_x(*i);
-            }
-            CliffordGate::SqrtXd(i) => {
-                bucket.sqrt_xd(*i);
-            }
-            CliffordGate::S(i) => {
-                bucket.s(*i);
-            }
-            CliffordGate::Sd(i) => {
-                bucket.sd(*i);
-            }
-            CliffordGate::H(i) => {
-                bucket.h(*i);
-            }
-            CliffordGate::CNOT(i, j) => {
-                bucket.cnot(*i, *j);
-            }
-            CliffordGate::CZ(i, j) => {
-                bucket.cz(*i, *j);
-            }
-        }
-        for i in 0..bucket.len() {
-            if bucket.support_size(i) == 1 {
-                hit_map.insert(i);
-            }
-        }
-    }
-    // println!("Synthesized {} operators", hit_map.len());
-    // println!("{:?}", bucket);
-    assert!(
-        hit_map.len() == input.len(),
-        "Synthesized {} operators, expected {}",
-        hit_map.len(),
-        input.len()
-    );
-}
 
 #[pyfunction]
 /// Single interface function for the 4 greedy algorithms for Pauli network synthesis

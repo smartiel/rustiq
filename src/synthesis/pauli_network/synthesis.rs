@@ -1,7 +1,10 @@
+use std::collections::HashSet;
+
 use super::greedy_order_preserving::pauli_network_synthesis_no_permutation;
 use super::greedy_pauli_network::pauli_network_synthesis;
-use crate::structures::PauliLike;
-use crate::structures::{CliffordCircuit, CliffordGate, IsometryTableau, Metric, PauliSet};
+use crate::structures::{
+    CliffordCircuit, CliffordGate, IsometryTableau, Metric, PauliLike, PauliSet,
+};
 use crate::synthesis::clifford::isometry::isometry_synthesis;
 use rand::thread_rng;
 use rand::Rng;
@@ -17,6 +20,7 @@ fn permute_input(pset: &mut PauliSet) -> Vec<usize> {
     }
     permutation
 }
+
 fn permute_circuit(circuit: &CliffordCircuit, permutation: &Vec<usize>) -> CliffordCircuit {
     let mut output = CliffordCircuit::new(circuit.nqbits);
     for gate in circuit.gates.iter() {
@@ -26,17 +30,41 @@ fn permute_circuit(circuit: &CliffordCircuit, permutation: &Vec<usize>) -> Cliff
             CliffordGate::Sd(i) => output.gates.push(CliffordGate::Sd(permutation[*i])),
             CliffordGate::SqrtX(i) => output.gates.push(CliffordGate::SqrtX(permutation[*i])),
             CliffordGate::SqrtXd(i) => output.gates.push(CliffordGate::SqrtXd(permutation[*i])),
-            CliffordGate::CNOT(i, j) => output
+            CliffordGate::CNOT(a, b) => output
                 .gates
-                .push(CliffordGate::CNOT(permutation[*i], permutation[*j])),
-            CliffordGate::CZ(i, j) => output
+                .push(CliffordGate::CNOT(permutation[*a], permutation[*b])),
+            CliffordGate::CZ(a, b) => output
                 .gates
-                .push(CliffordGate::CZ(permutation[*i], permutation[*j])),
+                .push(CliffordGate::CZ(permutation[*a], permutation[*b])),
         }
     }
     output
 }
 
+pub fn check_circuit(input: &[String], circuit: &CliffordCircuit) {
+    let mut hit_map: HashSet<usize> = HashSet::new();
+    let mut bucket = PauliSet::from_slice(input);
+    for i in 0..bucket.len() {
+        if bucket.support_size(i) == 1 {
+            hit_map.insert(i);
+        }
+    }
+    for gate in circuit.gates.iter() {
+        bucket.conjugate_with_gate(&gate);
+
+        for i in 0..bucket.len() {
+            if bucket.support_size(i) == 1 {
+                hit_map.insert(i);
+            }
+        }
+    }
+    assert!(
+        hit_map.len() == input.len(),
+        "Synthesized {} operators, expected {}",
+        hit_map.len(),
+        input.len()
+    );
+}
 pub fn greedy_pauli_network(
     operator_sequence: &mut PauliSet,
     metric: &Metric,
@@ -78,10 +106,15 @@ mod tests {
     #[test]
     fn test_shuffle() {
         let mut operator_sequence = PauliSet::new(4);
-        operator_sequence.insert("XX", false);
+        operator_sequence.insert("XZYX", false);
+        operator_sequence.insert("XXIY", false);
+        operator_sequence.insert("ZZYI", false);
+        operator_sequence.insert("XZZZ", false);
+        operator_sequence.insert("ZYZY", false);
+
         let metric = Metric::COUNT;
         let preserve_order = true;
-        let nshuffles = 50;
+        let nshuffles = 0;
 
         let result = greedy_pauli_network(
             &mut operator_sequence,
@@ -91,6 +124,15 @@ mod tests {
             false,
             false,
         );
-        assert_eq!(result.gates[0], CliffordGate::CNOT(1, 0));
+        check_circuit(
+            &[
+                "XZYX".to_owned(),
+                "XXIY".to_owned(),
+                "ZZYI".to_owned(),
+                "XZZZ".to_owned(),
+                "ZYZY".to_owned(),
+            ],
+            &result,
+        );
     }
 }
