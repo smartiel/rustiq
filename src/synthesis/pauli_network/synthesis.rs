@@ -106,7 +106,62 @@ pub fn greedy_pauli_network(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn test_fix_clifford() {
+        let mut operator_sequence = PauliSet::new(4);
+        operator_sequence.insert("XZYX", false);
+        operator_sequence.insert("XXIY", false);
+        operator_sequence.insert("ZZYI", false);
+        operator_sequence.insert("XXZZ", false);
+        operator_sequence.insert("ZYZY", false);
 
+        let metric = Metric::COUNT;
+        let preserve_order = true;
+        let nshuffles = 0;
+
+        let result = greedy_pauli_network(
+            &mut operator_sequence,
+            &metric,
+            preserve_order,
+            nshuffles,
+            false,
+            true,
+        );
+        check_circuit(
+            &[
+                "XZYX".to_owned(),
+                "XXIY".to_owned(),
+                "ZZYI".to_owned(),
+                "XZZZ".to_owned(),
+                "ZYZY".to_owned(),
+            ],
+            &result,
+        );
+        let mut clifford = IsometryTableau::new(4, 0);
+        clifford.conjugate_with_circuit(&result);
+        for i in 0..clifford.n {
+            let mut st = "".to_owned();
+            for q in 0..clifford.n {
+                if q != i {
+                    st += "I";
+                } else {
+                    st += "X";
+                }
+            }
+            let (_, t) = clifford.logicals.get(i);
+            assert_eq!(t, st);
+            let mut st = "".to_owned();
+            for q in 0..clifford.n {
+                if q != i {
+                    st += "I";
+                } else {
+                    st += "Z";
+                }
+            }
+            let (_, t) = clifford.logicals.get(i + clifford.n);
+            assert_eq!(t, st);
+        }
+    }
     #[test]
     fn test_shuffle() {
         let mut operator_sequence = PauliSet::new(4);
@@ -118,7 +173,7 @@ mod tests {
 
         let metric = Metric::COUNT;
         let preserve_order = true;
-        let nshuffles = 0;
+        let nshuffles = 10;
 
         let result = greedy_pauli_network(
             &mut operator_sequence,
