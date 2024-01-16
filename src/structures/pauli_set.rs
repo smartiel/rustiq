@@ -2,6 +2,7 @@ use super::pauli::Pauli;
 use super::pauli_like::PauliLike;
 use itertools::izip;
 use std::cmp::max;
+use std::collections::HashSet;
 const WIDTH: usize = 64;
 
 fn get_stride(index: usize) -> usize {

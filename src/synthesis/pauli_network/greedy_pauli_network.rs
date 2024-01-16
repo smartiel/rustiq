@@ -333,7 +333,7 @@ pub fn pauli_network_synthesis(
         if !skip_sort {
             bucket.support_size_sort();
         }
-        while bucket.support_size(0) == 1 {
+        while bucket.support_size(0) <= 1 && bucket.len() > 0 {
             bucket.pop();
         }
         if bucket.len() == 0 {

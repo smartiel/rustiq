@@ -107,6 +107,29 @@ pub fn greedy_pauli_network(
 mod tests {
     use super::*;
     #[test]
+    fn test_inifinte_loop_identities() {
+        let mut operator_sequence = PauliSet::new(4);
+        operator_sequence.insert("XZYX", false);
+        operator_sequence.insert("XXIY", false);
+        operator_sequence.insert("IIII", false);
+        operator_sequence.insert("ZZYI", false);
+        operator_sequence.insert("XXZZ", false);
+        operator_sequence.insert("ZYZY", false);
+
+        let metric = Metric::DEPTH;
+        let preserve_order = true;
+        let nshuffles = 0;
+
+        let result = greedy_pauli_network(
+            &mut operator_sequence,
+            &metric,
+            preserve_order,
+            nshuffles,
+            false,
+            true,
+        );
+    }
+    #[test]
     fn test_fix_clifford() {
         let mut operator_sequence = PauliSet::new(4);
         operator_sequence.insert("XZYX", false);
