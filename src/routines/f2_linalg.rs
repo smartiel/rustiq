@@ -267,6 +267,24 @@ pub fn non_zero_leading_principal_minors(matrix: &Matrix) -> (Matrix, Vec<(usize
     (c, moves)
 }
 
+pub fn count_ones(matrix: &Matrix) -> usize {
+    matrix
+        .iter()
+        .map(|row| row.iter().filter(|x| **x).count())
+        .sum()
+}
+
+pub fn count_ones_except_diag(matrix: &Matrix) -> usize {
+    let mut count = 0;
+    for i in 0..matrix.len() {
+        for j in 0..matrix[i].len() {
+            if i != j && matrix[i][j] {
+                count += 1;
+            }
+        }
+    }
+    return count;
+}
 #[cfg(test)]
 mod tests {
     use super::*;

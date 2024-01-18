@@ -33,7 +33,7 @@ fn pick_best_operation(scores: &Vec<Vec<i32>>) -> (i32, (usize, usize)) {
     return (best_score, best_qubits);
 }
 
-fn get_czs(graph: &GraphState, qubits_used: &Vec<bool>) -> CliffordCircuit {
+pub fn get_czs(graph: &GraphState, qubits_used: &Vec<bool>) -> CliffordCircuit {
     let mut mgraph: UnGraph<(), i32> = UnGraph::new_undirected();
     for _ in 0..graph.n {
         mgraph.add_node(());

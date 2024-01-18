@@ -3,6 +3,7 @@ use crate::structures::IsometryTableau;
 use crate::structures::Metric;
 
 use super::count::isometry_count_synthesis;
+use super::depth::isometry_depth_synthesis;
 
 pub fn isometry_synthesis(
     isometry: &IsometryTableau,
@@ -13,6 +14,8 @@ pub fn isometry_synthesis(
         Metric::COUNT => {
             return isometry_count_synthesis(isometry, niter);
         }
-        _ => panic!("Isometry synthesis targeting depth is not available (yet!)"),
+        Metric::DEPTH => {
+            return isometry_depth_synthesis(isometry);
+        }
     }
 }
