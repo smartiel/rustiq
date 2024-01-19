@@ -2,6 +2,9 @@ use super::pauli_like::PauliLike;
 use super::pauli_set::PauliSet;
 use crate::routines::f2_linalg::{row_echelon, Matrix};
 use rand::Rng;
+use std::fmt;
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct IsometryTableau {
     pub n: usize,
     pub k: usize,
@@ -25,7 +28,7 @@ impl IsometryTableau {
         let mut stabilizers = PauliSet::new(n + k);
         for i in 0..k {
             let mut vecbool = vec![false; 2 * n + 2 * k];
-            vecbool[n + i] = true;
+            vecbool[n + k + n + i] = true;
             stabilizers.insert_vec_bool(&vecbool, false);
         }
         IsometryTableau {
@@ -119,5 +122,16 @@ impl PauliLike for IsometryTableau {
     fn cnot(&mut self, i: usize, j: usize) {
         self.logicals.cnot(i, j);
         self.stabilizers.cnot(i, j);
+    }
+}
+
+impl fmt::Display for IsometryTableau {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Logicals:\n{}Stabilizers:\n{}",
+            self.logicals, self.stabilizers
+        )?;
+        return fmt::Result::Ok(());
     }
 }

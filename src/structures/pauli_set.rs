@@ -2,6 +2,8 @@ use super::pauli::Pauli;
 use super::pauli_like::PauliLike;
 use itertools::izip;
 use std::cmp::max;
+use std::fmt;
+
 const WIDTH: usize = 64;
 
 fn get_stride(index: usize) -> usize {
@@ -14,7 +16,7 @@ fn get_offset(index: usize) -> usize {
 
 /// A set of Pauli operators (module global phase)
 /// Conjugation by Clifford gates are vectorized
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct PauliSet {
     pub n: usize,
     nstrides: usize,
@@ -296,6 +298,16 @@ impl PauliSet {
         for (phase, axis) in transposed {
             self.insert_vec_bool(&axis, phase);
         }
+    }
+}
+
+impl fmt::Display for PauliSet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for i in 0..self.len() {
+            let (phase, string) = self.get(i);
+            write!(f, "{}{}\n", if phase { "-" } else { "+" }, string)?;
+        }
+        write!(f, "\n")
     }
 }
 

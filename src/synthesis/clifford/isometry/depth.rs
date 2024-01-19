@@ -105,7 +105,7 @@ pub fn isometry_depth_synthesis(isometry: &IsometryTableau) -> CliffordCircuit {
     let gk_circuit = graph_state_and_b_synthesis(&mut gk_as_gs, &mut transpose(&u));
 
     output.extend_with(&gk_circuit);
-    for qbit in 0..isometry.n {
+    for qbit in 0..isometry.n + isometry.k {
         output.gates.push(CliffordGate::H(qbit));
     }
     output.extend_with(&gn_circuit.dagger());
@@ -182,6 +182,7 @@ mod tests {
             }
         }
     }
+
     #[test]
     fn test_clifford_depth_synthesis() {
         for _ in 0..20 {
@@ -200,6 +201,7 @@ mod tests {
             assert_eq!(ref_d, d);
         }
     }
+
     #[test]
     fn test_isometry_depth_synthesis() {
         for _ in 0..20 {

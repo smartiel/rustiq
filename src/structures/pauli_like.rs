@@ -1,4 +1,5 @@
 use super::clifford_circuit::{CliffordCircuit, CliffordGate};
+
 /// This trait should be implemented by any struct that can be conjugated by a Clifford gate/circuit
 pub trait PauliLike {
     /// Conjugate the PauliLike object via a H gate

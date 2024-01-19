@@ -189,7 +189,7 @@ pub fn isometry_count_synthesis(isometry: &IsometryTableau, niter: usize) -> Cli
 
     let gk_circuit = graph_state_and_b_synthesis(&g_k, &transpose(&u), niter);
     output.extend_with(&gk_circuit);
-    for qbit in 0..isometry.n {
+    for qbit in 0..isometry.n + isometry.k {
         output.gates.push(CliffordGate::H(qbit));
     }
     output.extend_with(&gn_circuit.dagger());
