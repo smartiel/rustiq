@@ -97,7 +97,7 @@ pub fn greedy_pauli_network(
     if fix_clifford {
         let mut tableau = IsometryTableau::new(circuit.nqbits, 0);
         tableau.conjugate_with_circuit(&circuit.dagger());
-        let fix = isometry_synthesis(&mut tableau, &Metric::COUNT, 100);
+        let fix = isometry_synthesis(&mut tableau, &metric, 100);
         circuit.extend_with(&fix);
     }
     return circuit;
@@ -120,7 +120,7 @@ mod tests {
         let preserve_order = true;
         let nshuffles = 0;
 
-        let result = greedy_pauli_network(
+        let _result = greedy_pauli_network(
             &mut operator_sequence,
             &metric,
             preserve_order,
