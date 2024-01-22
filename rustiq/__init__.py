@@ -7,6 +7,7 @@ from .rustiq import (
     codiagonalization as rust_codiag,
     codiagonalization_sswise as rust_sswise,
     isometry_synthesis as rust_isometry,
+    aa_pauli_network_synthesis,
 )
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "pauli_network_synthesis",
     "codiagonalization",
     "clifford_synthesis",
+    "aa_pauli_network_synthesis",
 ]
 
 

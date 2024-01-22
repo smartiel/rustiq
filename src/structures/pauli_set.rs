@@ -195,6 +195,22 @@ impl PauliSet {
         return (count_diff % 2) == 0;
     }
 
+    // Returns the support of the operator (i.e. the list of qbit indices on which the operator acts non trivially)
+    pub fn get_support(&self, index: usize) -> Vec<usize> {
+        let mut support = Vec::new();
+        let index = index + self.start_offset;
+        let stride = get_stride(index);
+        let offset = get_offset(index);
+        for i in 0..self.n {
+            if (((self.data_array[i][stride] | self.data_array[i + self.n][stride]) >> offset) & 1)
+                != 0
+            {
+                support.push(i);
+            }
+        }
+        support
+    }
+
     /// Returns the support size of the operator (i.e. the number of non-I Pauli term in the operator)
     pub fn support_size(&self, index: usize) -> usize {
         let index = index + self.start_offset;

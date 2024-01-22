@@ -1,5 +1,6 @@
 pub mod clifford_circuit;
 pub mod graph_state;
+pub mod hardware;
 pub mod isometry;
 pub mod metric;
 pub mod pauli;
@@ -10,6 +11,7 @@ pub mod tableau;
 
 pub use clifford_circuit::{CliffordCircuit, CliffordGate};
 pub use graph_state::GraphState;
+pub use hardware::HardwareGraph;
 pub use isometry::IsometryTableau;
 pub use metric::Metric;
 pub use pauli::Pauli;

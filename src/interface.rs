@@ -6,7 +6,9 @@ use super::synthesis::clifford::graph_state::{
     synthesize_graph_state, synthesize_stabilizer_state,
 };
 use super::synthesis::clifford::isometry::isometry_synthesis as iso_synth;
-use super::synthesis::pauli_network::{check_circuit, greedy_pauli_network};
+use super::synthesis::pauli_network::{
+    aa_pauli_network_synthesis as aa_greedy_pauli_network, check_circuit, greedy_pauli_network,
+};
 use crate::structures::{IsometryTableau, PauliLike};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
@@ -35,6 +37,17 @@ pub fn pauli_network_synthesis(
     if check {
         check_circuit(&operator_sequence, &circuit);
     }
+    return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
+}
+
+#[pyfunction]
+///Pauli network synthesis interface for constrained architecture
+pub fn aa_pauli_network_synthesis(
+    operator_sequence: Vec<String>,
+    couplings: Vec<(usize, usize)>,
+) -> Vec<(String, Vec<usize>)> {
+    let bucket = PauliSet::from_slice(&operator_sequence);
+    let circuit = aa_greedy_pauli_network(bucket, &couplings);
     return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
 }
 
@@ -113,6 +126,7 @@ pub fn isometry_synthesis(
 #[pymodule]
 fn rustiq(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(pauli_network_synthesis))?;
+    m.add_wrapped(wrap_pyfunction!(aa_pauli_network_synthesis))?;
     m.add_wrapped(wrap_pyfunction!(graph_state_synthesis))?;
     m.add_wrapped(wrap_pyfunction!(stabilizer_state_synthesis))?;
     m.add_wrapped(wrap_pyfunction!(codiagonalization))?;
