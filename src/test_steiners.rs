@@ -133,17 +133,13 @@ fn get_steiner_tree(
 
 fn main() {
     let mut graph = UnGraph::new_undirected();
-    let nodes: Vec<_> = (0..5).map(|_| graph.add_node(())).collect();
+    let nodes: Vec<_> = (0..6).map(|_| graph.add_node(())).collect();
     graph.add_edge(NodeIndex::new(0), NodeIndex::new(1), 1.);
     graph.add_edge(NodeIndex::new(1), NodeIndex::new(2), 1.);
     graph.add_edge(NodeIndex::new(2), NodeIndex::new(3), 1.);
     graph.add_edge(NodeIndex::new(0), NodeIndex::new(3), 1.);
     graph.add_edge(NodeIndex::new(0), NodeIndex::new(4), 1.);
-    let all_paths: Vec<bellman_ford::Paths<NodeIndex, f64>> = nodes
-        .iter()
-        .map(|node_index| bellman_ford(&graph, *node_index).unwrap())
-        .collect();
-    let conv_paths = convert_shortest_paths(&all_paths, &nodes);
-    let steiner_tree = get_steiner_tree(&graph, &conv_paths, &vec![1, 2, 4]);
-    println!("{:?}", steiner_tree);
+    graph.add_edge(NodeIndex::new(5), NodeIndex::new(4), 1.);
+    graph.remove_node(NodeIndex::new(2));
+    println!("{:?}", graph);
 }
