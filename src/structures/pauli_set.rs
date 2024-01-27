@@ -114,6 +114,18 @@ impl PauliSet {
     pub fn insert_pauli(&mut self, pauli: &Pauli) -> usize {
         self.insert_vec_bool(&pauli.data, pauli.phase)
     }
+
+    pub fn set_entry(&mut self, operator_index: usize, qbit: usize, x_part: bool, z_part: bool) {
+        let stride = get_stride(operator_index + self.start_offset);
+        let offset = get_offset(operator_index + self.start_offset);
+        if x_part != (1 == (self.data_array[qbit][stride] >> offset) & 1) {
+            self.data_array[qbit][stride] ^= 1 << offset;
+        }
+        if z_part != (1 == (self.data_array[qbit + self.n][stride] >> offset) & 1) {
+            self.data_array[qbit + self.n][stride] ^= 1 << offset;
+        }
+    }
+
     /// Clears the data of the Pauli set
     pub fn clear(&mut self) {
         for j in 0..self.nstrides {

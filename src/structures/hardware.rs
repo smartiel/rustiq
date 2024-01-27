@@ -52,12 +52,13 @@ fn build_closure_mst(
     let mst: Graph<(), f64, Undirected> = Graph::from_elements(min_spanning_tree(&g));
     mst
 }
+
 #[derive(Debug, Clone)]
 pub struct SteinerTree {
     pub graph: UnGraph<(), i32, u32>,
-    mapping: HashMap<usize, NodeIndex>,
-    inverse_mapping: HashMap<NodeIndex, usize>,
-    terminals: Vec<usize>,
+    pub mapping: HashMap<usize, NodeIndex>,
+    pub inverse_mapping: HashMap<NodeIndex, usize>,
+    pub terminals: Vec<usize>,
 }
 
 impl SteinerTree {
@@ -83,6 +84,9 @@ impl SteinerTree {
         }
         neighs
     }
+    pub fn nodes(&self) -> Vec<usize> {
+        self.mapping.keys().map(|k| *k).collect()
+    }
     fn add_node(&mut self, node: usize) {
         let node_index = self.graph.add_node(());
         self.mapping.insert(node, node_index);
@@ -94,10 +98,6 @@ impl SteinerTree {
     }
 
     fn remove_node(&mut self, node: usize) {
-        // println!("Removing node {}", node);
-        // println!("mapping {:?}", self.mapping);
-        // println!("inv mapping {:?}", self.inverse_mapping);
-        // println!("Graph {:?}", self.graph);
         if !self.contains(node) {
             panic!("Node {} is not in the tree", node);
         }
@@ -115,9 +115,6 @@ impl SteinerTree {
         self.mapping.insert(i, node_index);
         self.inverse_mapping.insert(node_index, i);
         self.graph.remove_node(node_index);
-        // println!("mapping {:?}", self.mapping);
-        // println!("inv mapping {:?}", self.inverse_mapping);
-        // println!("Graph {:?}", self.graph);
     }
 
     pub fn update_tree(&mut self, new_support: &Vec<usize>, qbits: &[usize; 2]) {
