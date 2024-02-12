@@ -155,7 +155,7 @@ mod tests {
                 "XZYX".to_owned(),
                 "XXIY".to_owned(),
                 "ZZYI".to_owned(),
-                "XZZZ".to_owned(),
+                "XXZZ".to_owned(),
                 "ZYZY".to_owned(),
             ],
             &result,
