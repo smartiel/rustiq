@@ -148,15 +148,22 @@ fn single_synthesis_step_count(bucket: &mut PauliSet) -> CliffordCircuit {
     let mut max_score = -1;
     let mut best_chunk: Chunk = [None; 4];
     let mut best_args: [usize; 2] = [0, 0];
-    for qbit1 in 0..bucket.n {
-        for qbit2 in 0..qbit1 {
-            // computing the initial identity count
-            let init_id_count = bucket.count_id(qbit1) + bucket.count_id(qbit2);
+    let support = bucket.get_support(0);
+    for i1 in 0..support.len() {
+        for i2 in  0..i1 {
+            let qbit1 = support[i1];
+            let qbit2 = support[i2];
+            let init_id_count_1 = bucket.count_id(qbit1) ;
+            let init_id_count_2 = bucket.count_id(qbit2) ;
             for chunk in ALL_CHUNKS {
                 // conjugating with the chunk
                 conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, false);
-                let new_count = bucket.count_id(qbit1) + bucket.count_id(qbit2);
-                let score: i32 = new_count as i32 - init_id_count as i32;
+                let new_count_1 = bucket.count_id(qbit1);
+                let new_count_2 = bucket.count_id(qbit2);
+                let score_1 = new_count_1 as i32 - init_id_count_1 as i32;
+                let score_2 = new_count_2 as i32 - init_id_count_2 as i32;
+                assert!(score_1 == 0 || score_2 == 0);
+                let score = if score_1 == 0 { score_2 } else { score_1 };
                 if score > max_score {
                     max_score = score;
                     best_chunk = chunk.clone();
@@ -166,6 +173,7 @@ fn single_synthesis_step_count(bucket: &mut PauliSet) -> CliffordCircuit {
             }
         }
     }
+   
     conjugate_with_chunk(bucket, &best_chunk, best_args[0], best_args[1], false);
 
     return chunk_to_circuit(&best_chunk, best_args[0], best_args[1], bucket.n);
