@@ -146,7 +146,7 @@ pub fn conjugate_with_chunk(
 
 fn single_synthesis_step_count(bucket: &mut PauliSet) -> CliffordCircuit {
     let mut max_score = -1;
-    let mut best_chunk: Chunk = [None; 4];
+    let mut best_chunk: Chunk = [None; 3];
     let mut best_args: [usize; 2] = [0, 0];
     let support = bucket.get_support(0);
     for i1 in 0..support.len() {
@@ -191,7 +191,7 @@ fn build_graph(bucket: &mut PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usiz
 
             let init_id_count = bucket.count_id(qbit1) + bucket.count_id(qbit2);
             let mut max_score = 0;
-            let mut best_chunk: Chunk = [None; 4];
+            let mut best_chunk: Chunk = [None; 3];
             for chunk in ALL_CHUNKS {
                 // conjugating with the chunk
                 conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, false);
