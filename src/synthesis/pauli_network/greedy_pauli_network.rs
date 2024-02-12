@@ -7,93 +7,10 @@ use crate::structures::metric::Metric;
 use crate::structures::pauli_like::PauliLike;
 use crate::structures::pauli_set::PauliSet;
 
-pub const ALL_CHUNKS: [[Option<CliffordGate>; 3]; 18] = [
-    [None, None, Some(CliffordGate::CNOT(0, 1))],
-    [None, None, Some(CliffordGate::CNOT(1, 0))],
-    [
-        None,
-        Some(CliffordGate::SqrtX(1)),
-        Some(CliffordGate::CNOT(0, 1)),
-    ],
-    [
-        None,
-        Some(CliffordGate::SqrtX(1)),
-        Some(CliffordGate::CNOT(1, 0)),
-    ],
-    [
-        None,
-        Some(CliffordGate::H(1)),
-        Some(CliffordGate::CNOT(0, 1)),
-    ],
-    [
-        None,
-        Some(CliffordGate::H(1)),
-        Some(CliffordGate::CNOT(1, 0)),
-    ],
-    [
-        Some(CliffordGate::SqrtX(0)),
-        None,
-        Some(CliffordGate::CNOT(0, 1)),
-    ],
-    [
-        Some(CliffordGate::SqrtX(0)),
-        None,
-        Some(CliffordGate::CNOT(1, 0)),
-    ],
-    [
-        Some(CliffordGate::SqrtX(0)),
-        Some(CliffordGate::SqrtX(1)),
-        Some(CliffordGate::CNOT(0, 1)),
-    ],
-    [
-        Some(CliffordGate::SqrtX(0)),
-        Some(CliffordGate::SqrtX(1)),
-        Some(CliffordGate::CNOT(1, 0)),
-    ],
-    [
-        Some(CliffordGate::SqrtX(0)),
-        Some(CliffordGate::H(1)),
-        Some(CliffordGate::CNOT(0, 1)),
-    ],
-    [
-        Some(CliffordGate::SqrtX(0)),
-        Some(CliffordGate::H(1)),
-        Some(CliffordGate::CNOT(1, 0)),
-    ],
-    [
-        Some(CliffordGate::H(0)),
-        None,
-        Some(CliffordGate::CNOT(0, 1)),
-    ],
-    [
-        Some(CliffordGate::H(0)),
-        None,
-        Some(CliffordGate::CNOT(1, 0)),
-    ],
-    [
-        Some(CliffordGate::H(0)),
-        Some(CliffordGate::SqrtX(1)),
-        Some(CliffordGate::CNOT(0, 1)),
-    ],
-    [
-        Some(CliffordGate::H(0)),
-        Some(CliffordGate::SqrtX(1)),
-        Some(CliffordGate::CNOT(1, 0)),
-    ],
-    [
-        Some(CliffordGate::H(0)),
-        Some(CliffordGate::H(1)),
-        Some(CliffordGate::CNOT(0, 1)),
-    ],
-    [
-        Some(CliffordGate::H(0)),
-        Some(CliffordGate::H(1)),
-        Some(CliffordGate::CNOT(1, 0)),
-    ],
-];
+use super::chunks::{Chunk, ALL_CHUNKS};
 
 pub fn chunk_to_circuit(
-    chunk: &[Option<CliffordGate>; 3],
+    chunk: &Chunk,
     qbit1: usize,
     qbit2: usize,
     nqbits: usize,
@@ -151,7 +68,7 @@ pub fn chunk_to_circuit(
 
 pub fn conjugate_with_chunk(
     bucket: &mut PauliSet,
-    chunk: &[Option<CliffordGate>; 3],
+    chunk: &Chunk,
     qbit1: usize,
     qbit2: usize,
     reverse: bool,
@@ -229,7 +146,7 @@ pub fn conjugate_with_chunk(
 
 fn single_synthesis_step_count(bucket: &mut PauliSet) -> CliffordCircuit {
     let mut max_score = -1;
-    let mut best_chunk: [Option<CliffordGate>; 3] = [None; 3];
+    let mut best_chunk: Chunk = [None; 4];
     let mut best_args: [usize; 2] = [0, 0];
     for qbit1 in 0..bucket.n {
         for qbit2 in 0..qbit1 {
@@ -254,23 +171,19 @@ fn single_synthesis_step_count(bucket: &mut PauliSet) -> CliffordCircuit {
     return chunk_to_circuit(&best_chunk, best_args[0], best_args[1], bucket.n);
 }
 
-fn build_graph(
-    bucket: &mut PauliSet,
-) -> (
-    UnGraph<(), i32>,
-    HashMap<(usize, usize), [Option<CliffordGate>; 3]>,
-) {
+fn build_graph(bucket: &mut PauliSet) -> (UnGraph<(), i32>, HashMap<(usize, usize), Chunk>) {
     let mut graph: UnGraph<(), i32> = UnGraph::new_undirected();
-    let mut best_chunks: HashMap<(usize, usize), [Option<CliffordGate>; 3]> = HashMap::new();
+    let mut best_chunks: HashMap<(usize, usize), Chunk> = HashMap::new();
     for _ in 0..bucket.n {
         graph.add_node(());
     }
     for qbit1 in 0..bucket.n {
         for qbit2 in (qbit1 + 1)..bucket.n {
             // computing the initial identity count
+
             let init_id_count = bucket.count_id(qbit1) + bucket.count_id(qbit2);
             let mut max_score = 0;
-            let mut best_chunk: [Option<CliffordGate>; 3] = [None; 3];
+            let mut best_chunk: Chunk = [None; 4];
             for chunk in ALL_CHUNKS {
                 // conjugating with the chunk
                 conjugate_with_chunk(bucket, &chunk, qbit1, qbit2, false);
@@ -326,6 +239,7 @@ pub fn pauli_network_synthesis(
     if bucket.len() == 0 {
         return CliffordCircuit::new(0);
     }
+
     let nqbits = bucket.n;
     let mut output = CliffordCircuit::new(nqbits);
 

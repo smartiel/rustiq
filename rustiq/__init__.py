@@ -15,7 +15,6 @@ __all__ = [
     "pauli_network_synthesis",
     "codiagonalization",
     "clifford_synthesis",
-    "aa_pauli_network_synthesis",
 ]
 
 
@@ -62,7 +61,7 @@ def graph_state_synthesis(graph, metric, syndrome_iter=1):
         list: The synthesized circuit.
     """
     syndrome_iter = syndrome_iter or 1
-    adj = nx.to_numpy_array(graph) < 0.5
+    adj = nx.to_numpy_array(graph) > 0.5
     return rust_gs(adj.tolist(), metric, syndrome_iter)
 
 

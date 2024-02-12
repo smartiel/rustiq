@@ -295,18 +295,25 @@ impl PauliSet {
     */
     pub fn count_id(&self, qbit: usize) -> usize {
         let mut count: usize = 0;
-        for (vx, vz) in self.data_array[qbit]
-            .iter()
-            .zip(self.data_array[qbit + self.n].iter())
-        {
-            let value = vx | vz;
-            if value == 0 {
-                count += 64;
-            } else {
-                return count + value.trailing_zeros() as usize;
+        let nstart_stride = get_stride(self.start_offset);
+        for ns in nstart_stride..self.nstrides {
+            let r_x = self.data_array[qbit][ns];
+            let r_z = self.data_array[qbit + self.n][ns];
+            let value = r_x | r_z;
+            count += value.trailing_zeros() as usize;
+            if ns == nstart_stride {
+                count -= self.start_offset;
+            }
+            if ns == self.nstrides - 1 {
+                if value == 0 {
+                    count -= 64 - get_offset(self.start_offset + self.noperators);
+                }
+            }
+            if value != 0 {
+                return count;
             }
         }
-        count
+        return count;
     }
     /// Sorts the set by support size
     pub fn support_size_sort(&mut self) {
@@ -507,16 +514,15 @@ mod pauli_set_tests {
     }
     #[test]
     fn count_id() {
-        let mut pset = PauliSet::new(4);
-        pset.insert(&"IIII", false);
-        pset.insert(&"XIII", false);
-        pset.insert(&"XXII", false);
-        pset.insert(&"XXXI", false);
-        pset.insert(&"XXXX", false);
-        assert_eq!(pset.count_id(0), 1);
-        assert_eq!(pset.count_id(1), 2);
-        assert_eq!(pset.count_id(2), 3);
-        assert_eq!(pset.count_id(3), 4);
+        let mut pset = PauliSet::new(5);
+        pset.insert(&"IIIII", false);
+        pset.insert(&"XIIII", false);
+        pset.insert(&"XXIII", false);
+        pset.insert(&"XXXII", false);
+        pset.insert(&"XXXXI", false);
+        for i in 0..5 {
+            assert_eq!(pset.count_id(i), i + 1);
+        }
     }
     #[test]
     fn sort_test() {
