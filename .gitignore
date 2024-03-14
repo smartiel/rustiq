@@ -6,4 +6,4 @@ benchmarks/results
 build
 *.egg*
 misc
-rustiq/*.so
+**.so

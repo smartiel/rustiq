@@ -1,2 +1,28 @@
 [build-system]
 requires = ["setuptools", "wheel", "setuptools-rust"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rustiq"
+version = "1.0.0"
+description = "A Quantum Circuit synthesis library"
+readme = "README.md"
+authors = [{ name = "Simon Martiel", email = "martiel@ibm.com" }]
+license = { file = "LICENSE.txt" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["quantum", "quantum circuit", "synthesis", "rust"]
+dependencies = [
+    "numpy", "networkx"
+]
+requires-python = ">=3.9"
+
+[tool.setuptools.packages]
+find = { where = ["python"] }
+
+
+[[tool.setuptools-rust.ext-modules]]
+target = "rustiq.rustiq"  
