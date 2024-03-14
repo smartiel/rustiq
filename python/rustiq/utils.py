@@ -1,11 +1,22 @@
 """
-Utility functions for rustiq's circuit format
+Utility functions for rustiq's circuits
 """
 
+import typing
 
-def entangling_depth(circ):
+_Circuit: typing.TypeAlias = list[tuple[str, list[int]]]
+
+
+def entangling_depth(circ: _Circuit) -> int:
     """
     Computes the entangling depth of a circuit.
+    Only checks the number of qubits of the gate to decide if it is entangling or not.
+
+    Arguments:
+        circ: A circuit.
+
+    Returns:
+        int: the entangling depth
     """
     depths = {}
     for _, qbits in circ:
@@ -16,8 +27,15 @@ def entangling_depth(circ):
     return max(depths.values()) if depths else 0
 
 
-def entangling_count(circ):
+def entangling_count(circ: _Circuit) -> int:
     """
     Count the number of entangling gates in a circuit.
+    Only checks the number of qubits of the gate to decide if it is entangling or not.
+
+    Arguments:
+        circ: A circuit.
+
+    Returns:
+        int: the entangling count
     """
     return sum(len(qbits) == 2 for _, qbits in circ)
