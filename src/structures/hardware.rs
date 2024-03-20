@@ -87,17 +87,17 @@ impl SteinerTree {
     pub fn nodes(&self) -> Vec<usize> {
         self.mapping.keys().map(|k| *k).collect()
     }
-    fn add_node(&mut self, node: usize) {
+    pub fn add_node(&mut self, node: usize) {
         let node_index = self.graph.add_node(());
         self.mapping.insert(node, node_index);
         self.inverse_mapping.insert(node_index, node);
     }
 
-    fn add_edge(&mut self, n1: usize, n2: usize) {
+    pub fn add_edge(&mut self, n1: usize, n2: usize) {
         self.graph.add_edge(self.mapping[&n1], self.mapping[&n2], 1);
     }
 
-    fn remove_node(&mut self, node: usize) {
+    pub fn remove_node(&mut self, node: usize) {
         if !self.contains(node) {
             panic!("Node {} is not in the tree", node);
         }
@@ -145,8 +145,7 @@ impl SteinerTree {
         }
         return;
     }
-
-    fn prune_non_terminal_leaves(&mut self) {
+    pub fn prune_non_terminal_leaves(&mut self) {
         loop {
             let mut popped = false;
             for node in self.graph.node_indices() {
