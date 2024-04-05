@@ -47,7 +47,17 @@ Most of the synthesis algorithms are binded and wrapped in a nice python interfa
 
 The algorithms implemented in this package have been developed in the following papers:
 
-For Pauli network synthesis: to appear ;)
+For Pauli network synthesis: 
+```bibtex
+@misc{debrugière2024faster,
+      title={Faster and shorter synthesis of Hamiltonian simulation circuits}, 
+      author={Timothée Goubault de Brugière and Simon Martiel},
+      year={2024},
+      eprint={2404.03280},
+      archivePrefix={arXiv},
+      primaryClass={quant-ph}
+}
+```
 
 For graph/stabilizer state synthesis, Clifford operators, Clifford isometries, co-diagonalization:
 ```bibtex
