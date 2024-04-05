@@ -21,7 +21,10 @@ from .rustiq import (
     codiagonalization as rust_codiag,
     codiagonalization_sswise as rust_sswise,
     isometry_synthesis as rust_isometry,
+    extract_rotations as rust_extract_rotations,
+    zhang_rotation_optimization,
 )
+from .utils import convert_circuit
 
 __all__ = [
     "Metric",
@@ -31,6 +34,7 @@ __all__ = [
     "codiagonalization",
     "clifford_isometry_synthesis",
     "clifford_synthesis",
+    "extract_rotations",
 ]
 
 _Circuit: typing.TypeAlias = list[tuple[str, list[int]]]
@@ -184,3 +188,27 @@ def clifford_synthesis(
     """
     syndrome_iter = syndrome_iter or 1
     return rust_isometry(logicals, [], metric, syndrome_iter)
+
+
+def extract_rotations(
+    circuit: list[
+        typing.Union[tuple[str, list[int]], tuple[str, list[int], typing.Any]]
+    ],
+    optimize: bool = True,
+):
+    """
+    Converts a circuit into a sequence of Pauli rotations and a final Clifford operator.
+    The circuit is specified as a sequence of tuples:
+    - ("CX", [q0, q1]) for a CNOT gate
+    - ("H", [q0]) for a Hadamard gate
+    - ("S", [q0]) for a S gate
+    - ("RZ", [q0], angle) for a RZ gate with angle in radian
+
+    This gate set is exactly universal for QC.
+    """
+    circuit_no_angles, angles = convert_circuit(circuit)
+    nqubits = max(max(g[1]) for g in circuit) + 1
+    rotations, final_clifford_tableau = rust_extract_rotations(
+        circuit_no_angles, [str(a) for a in angles], nqubits, optimize
+    )
+    return rotations, final_clifford_tableau

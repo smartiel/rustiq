@@ -7,7 +7,9 @@ use super::synthesis::clifford::graph_state::{
 };
 use super::synthesis::clifford::isometry::isometry_synthesis as iso_synth;
 use super::synthesis::pauli_network::{check_circuit, greedy_pauli_network};
-use crate::structures::{IsometryTableau, PauliLike};
+use crate::routines::rotation_extraction::extract_rotations as extract_rot;
+use crate::routines::rotation_optimization::zhang_rotation_optimization as zhang_opt;
+use crate::structures::{IsometryTableau, Parameter, PauliLike, Tableau};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 
@@ -110,6 +112,68 @@ pub fn isometry_synthesis(
     return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
 }
 
+#[pyfunction]
+pub fn extract_rotations(
+    circuit: Vec<(String, Vec<usize>)>,
+    angles: Vec<String>,
+    nqubits: usize,
+    optimize: bool,
+) -> (Vec<(String, String)>, Vec<(bool, String)>) {
+    let (rotations, mut clifford) = extract_rot(&circuit, nqubits);
+    let angles = angles.into_iter().map(|s| Parameter::from_string(s));
+    let mut rotations: Vec<_> = angles
+        .zip(rotations)
+        .map(|(mut angle, (phase, axis))| {
+            if phase {
+                angle.flip_sign();
+            }
+            (axis, angle)
+        })
+        .collect();
+    if optimize {
+        let (new_rotations, inverse_final_clifford) = zhang_opt(rotations, nqubits);
+        rotations = new_rotations;
+        clifford = clifford * inverse_final_clifford.adjoint();
+    }
+    let rotations = rotations
+        .into_iter()
+        .map(|(x, y)| (x, y.to_string()))
+        .collect();
+    return (
+        rotations,
+        (0..2 * nqubits).map(|i| clifford.logicals.get(i)).collect(),
+    );
+}
+
+#[pyfunction]
+pub fn zhang_rotation_optimization(
+    rotations: Vec<(String, String)>,
+    nqubits: usize,
+) -> (Vec<(String, String)>, Vec<(bool, String)>) {
+    let rotations = rotations
+        .into_iter()
+        .map(|(a, b)| (a, Parameter::from_string(b)))
+        .collect();
+    let (rotations, inverse_final_clifford) = zhang_opt(rotations, nqubits);
+    let rotations = rotations
+        .into_iter()
+        .map(|(x, y)| (x, y.to_string()))
+        .collect();
+    let clifford = inverse_final_clifford.adjoint();
+    return (
+        rotations,
+        (0..2 * nqubits).map(|i| clifford.logicals.get(i)).collect(),
+    );
+}
+
+#[pyfunction]
+pub fn tableau_mul(t1: Vec<(bool, String)>, t2: Vec<(bool, String)>) -> Vec<(bool, String)> {
+    let t1 = Tableau::from_operators(&t1);
+    let t2 = Tableau::from_operators(&t2);
+    let t3 = t1 * t2;
+    (0..2 * t3.logicals.n).map(|i| t3.logicals.get(i)).collect()
+}
+
 #[pymodule]
 fn rustiq(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(pauli_network_synthesis))?;
@@ -118,6 +182,9 @@ fn rustiq(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(codiagonalization))?;
     m.add_wrapped(wrap_pyfunction!(codiagonalization_sswise))?;
     m.add_wrapped(wrap_pyfunction!(isometry_synthesis))?;
+    m.add_wrapped(wrap_pyfunction!(extract_rotations))?;
+    m.add_wrapped(wrap_pyfunction!(zhang_rotation_optimization))?;
+    m.add_wrapped(wrap_pyfunction!(tableau_mul))?;
     m.add_class::<Metric>()?;
     Ok(())
 }

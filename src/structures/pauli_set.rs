@@ -112,7 +112,14 @@ impl PauliSet {
         return self.noperators - 1;
     }
     pub fn insert_pauli(&mut self, pauli: &Pauli) -> usize {
-        self.insert_vec_bool(&pauli.data, pauli.phase)
+        self.insert_vec_bool(&pauli.data, pauli.phase == 2)
+    }
+    pub fn set_phase(&mut self, col: usize, phase: bool) {
+        let stride = get_stride(col);
+        let offset = get_offset(col);
+        if phase != ((self.phases[stride] >> offset & 1) != 0) {
+            self.phases[stride] ^= 1 << offset;
+        }
     }
 
     pub fn set_entry(&mut self, operator_index: usize, qbit: usize, x_part: bool, z_part: bool) {
@@ -123,6 +130,13 @@ impl PauliSet {
         }
         if z_part != (1 == (self.data_array[qbit + self.n][stride] >> offset) & 1) {
             self.data_array[qbit + self.n][stride] ^= 1 << offset;
+        }
+    }
+    pub fn set_raw_entry(&mut self, row: usize, col: usize, value: bool) {
+        let stride = get_stride(col);
+        let offset = get_offset(col);
+        if value != (1 == (self.data_array[row][stride] >> offset) & 1) {
+            self.data_array[row][stride] ^= 1 << offset;
         }
     }
 
@@ -147,6 +161,23 @@ impl PauliSet {
         self.phases[stride] &= !(1 << offset);
         self.start_offset += 1;
         self.noperators -= 1;
+    }
+    /// Pops the last rotation in the set
+    pub fn pop_last(&mut self) {
+        let stride = get_stride(self.start_offset + self.noperators - 1);
+        let offset = get_offset(self.start_offset + self.noperators - 1);
+        for i in 0..2 * self.n {
+            self.data_array[i][stride] &= !(1 << offset);
+        }
+        self.phases[stride] &= !(1 << offset);
+        self.noperators -= 1;
+    }
+    /// Set some operator to identity (because popping in the middle is expensive :O)
+    pub fn set_to_identity(&mut self, operator_index: usize) {
+        // set_entry(&mut self, operator_index: usize, qbit: usize, x_part: bool, z_part: bool)
+        for i in 0..self.n {
+            self.set_entry(operator_index, i, false, false);
+        }
     }
     /// Get the operator at index `operator_index` as a pair (phase, string)
     pub fn get(&self, operator_index: usize) -> (bool, String) {
@@ -191,7 +222,100 @@ impl PauliSet {
     /// Get the operator at index `operator_index` as a `Pauli` object
     pub fn get_as_pauli(&self, operator_index: usize) -> Pauli {
         let (phase, data) = self.get_as_vec_bool(operator_index);
-        return Pauli::from_vec_bool(data, phase);
+        return Pauli::from_vec_bool(data, if phase { 2 } else { 0 });
+    }
+    /// Get a single entry of the PauliSet
+    pub fn get_entry(&self, row: usize, col: usize) -> bool {
+        let col = col + self.start_offset;
+        let stride = get_stride(col);
+        let offset = get_offset(col);
+        return ((self.data_array[row][stride] >> offset) & 1) != 0;
+    }
+    pub fn get_phase(&self, col: usize) -> bool {
+        let col = col + self.start_offset;
+        let stride = get_stride(col);
+        let offset = get_offset(col);
+        return ((self.phases[stride] >> offset) & 1) != 0;
+    }
+
+    pub fn get_i_factors(&self) -> Vec<u8> {
+        let mut output = Vec::new();
+        for i in 0..self.len() {
+            let mut ifact: u8 = 0;
+            for j in 0..self.n {
+                if self.get_entry(j, i) & self.get_entry(j + self.n, i) {
+                    ifact += 1;
+                }
+            }
+            output.push(ifact % 4);
+        }
+        output
+    }
+    /// Get the inverse Z output of the tableau (assuming the PauliSet is a Tableau, i.e. has exactly 2n operators storing X1...Xn Z1...Zn images)
+    pub fn get_inverse_z(&self, qbit: usize) -> (bool, String) {
+        let mut pstring = String::new();
+        let mut cy = 0;
+        for i in 0..self.n {
+            let x_bit = self.get_entry(qbit, i + self.n);
+            let z_bit = self.get_entry(qbit, i);
+            match (x_bit, z_bit) {
+                (false, false) => {
+                    pstring.push('I');
+                }
+                (true, false) => {
+                    pstring.push('X');
+                }
+                (false, true) => {
+                    pstring.push('Z');
+                }
+                (true, true) => {
+                    pstring.push('Y');
+                    cy += 1;
+                }
+            }
+        }
+        return ((cy % 2 != 0), pstring);
+    }
+    /// Get the inverse X output of the tableau (assuming the PauliSet is a Tableau, i.e. has exactly 2n operators storing X1...Xn Z1...Zn images)
+    pub fn get_inverse_x(&self, qbit: usize) -> (bool, String) {
+        let mut pstring = String::new();
+        let mut cy = 0;
+        for i in 0..self.n {
+            let x_bit = self.get_entry(qbit + self.n, i + self.n);
+            let z_bit = self.get_entry(qbit + self.n, i);
+            match (x_bit, z_bit) {
+                (false, false) => {
+                    pstring.push('I');
+                }
+                (true, false) => {
+                    pstring.push('X');
+                }
+                (false, true) => {
+                    pstring.push('Z');
+                }
+                (true, true) => {
+                    pstring.push('Y');
+                    cy += 1;
+                }
+            }
+        }
+        return ((cy % 2 != 0), pstring);
+    }
+
+    /// Returns the sum mod 2 of the logical AND of a row with an external vector of booleans
+    pub fn and_row_acc(&self, row: usize, vec: &Vec<bool>) -> bool {
+        let mut output = false;
+        for i in 0..2 * self.n {
+            output ^= self.get_entry(row, i) & vec[i];
+        }
+        output
+    }
+
+    /// Check equality between two operators
+    pub fn equals(&self, i: usize, j: usize) -> bool {
+        let (_, vec1) = self.get_as_vec_bool(i);
+        let (_, vec2) = self.get_as_vec_bool(j);
+        return vec1 == vec2;
     }
 
     /// Checks if two operators in the set commute
