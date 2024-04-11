@@ -8,6 +8,7 @@ use super::synthesis::clifford::graph_state::{
 use super::synthesis::clifford::isometry::isometry_synthesis as iso_synth;
 use super::synthesis::pauli_network::{check_circuit, greedy_pauli_network};
 use crate::routines::rotation_extraction::extract_rotations as extract_rot;
+use crate::routines::rotation_optimization::full_initial_state_propagation;
 use crate::routines::rotation_optimization::zhang_rotation_optimization as zhang_opt;
 use crate::structures::{IsometryTableau, Parameter, PauliLike, Tableau};
 use pyo3::prelude::*;
@@ -167,6 +168,27 @@ pub fn zhang_rotation_optimization(
 }
 
 #[pyfunction]
+pub fn initial_state_propagation(
+    rotations: Vec<(String, String)>,
+) -> (Vec<(String, String)>, Vec<(bool, String)>) {
+    let rotations: Vec<_> = rotations
+        .into_iter()
+        .map(|(a, b)| (a, Parameter::from_string(b)))
+        .collect();
+    let (rotations, final_clifford) = full_initial_state_propagation(&rotations);
+    let rotations = rotations
+        .into_iter()
+        .map(|(x, y)| (x, y.to_string()))
+        .collect();
+    return (
+        rotations,
+        (0..2 * final_clifford.logicals.n)
+            .map(|i| final_clifford.logicals.get(i))
+            .collect(),
+    );
+}
+
+#[pyfunction]
 pub fn tableau_mul(t1: Vec<(bool, String)>, t2: Vec<(bool, String)>) -> Vec<(bool, String)> {
     let t1 = Tableau::from_operators(&t1);
     let t2 = Tableau::from_operators(&t2);
@@ -184,6 +206,7 @@ fn rustiq(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(isometry_synthesis))?;
     m.add_wrapped(wrap_pyfunction!(extract_rotations))?;
     m.add_wrapped(wrap_pyfunction!(zhang_rotation_optimization))?;
+    m.add_wrapped(wrap_pyfunction!(initial_state_propagation))?;
     m.add_wrapped(wrap_pyfunction!(tableau_mul))?;
     m.add_class::<Metric>()?;
     Ok(())

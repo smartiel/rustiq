@@ -1,6 +1,6 @@
 use super::pauli_like::PauliLike;
 use super::pauli_set::PauliSet;
-use super::IsometryTableau;
+use super::{CliffordCircuit, IsometryTableau};
 use rand::Rng;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -19,6 +19,12 @@ impl Tableau {
             logicals.insert_vec_bool(&vecbool, false);
         }
         Tableau { logicals }
+    }
+    /// Build the Tableau corresponding to a Clifford circuit
+    pub fn from_circuit(circuit: &CliffordCircuit) -> Self {
+        let mut tab = Self::new(circuit.nqbits);
+        tab.conjugate_with_circuit(circuit);
+        return tab;
     }
     /// Generates a random Tableau (no garantuees, just here for testing)
     pub fn random(n: usize) -> Self {

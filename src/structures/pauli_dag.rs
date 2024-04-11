@@ -4,7 +4,7 @@ use petgraph::prelude::*;
 pub type Dag = DiGraph<usize, ()>;
 
 /// Constructs an anti-commutation Dag from a set of operators
-fn build_dag_from_pauli_set(pauli_set: &PauliSet) -> Dag {
+pub fn build_dag_from_pauli_set(pauli_set: &PauliSet) -> Dag {
     let mut dag = Dag::new();
     let node_indices: Vec<NodeIndex> = (0..pauli_set.len()).map(|i| dag.add_node(i)).collect();
 
@@ -19,7 +19,7 @@ fn build_dag_from_pauli_set(pauli_set: &PauliSet) -> Dag {
 }
 
 /// Computes the list of operators that can be synthesized
-fn _get_front_layer(dag: &Dag) -> Vec<NodeIndex> {
+pub fn get_front_layer(dag: &Dag) -> Vec<NodeIndex> {
     return dag
         .node_indices()
         .filter(|node| dag.neighbors(*node).collect::<Vec<_>>().len() == 0)
@@ -41,7 +41,7 @@ impl PauliDag {
     pub fn from_pauli_set(pauli_set: PauliSet) -> Self {
         let nqbits = pauli_set.n;
         let dag = build_dag_from_pauli_set(&pauli_set);
-        let indices_front_layer = _get_front_layer(&dag);
+        let indices_front_layer = get_front_layer(&dag);
 
         let mut front_layer = PauliSet::new(nqbits);
         for index in indices_front_layer {
@@ -80,7 +80,7 @@ impl PauliDag {
             }
         }
         // Updating the front layer bucket
-        for index in _get_front_layer(&self.dag) {
+        for index in get_front_layer(&self.dag) {
             let (phase, pstring) = self.pauli_set.get(*self.dag.node_weight(index).unwrap());
             self.front_layer.insert(&pstring, phase);
         }
