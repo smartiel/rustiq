@@ -131,10 +131,12 @@ pub fn extract_rotations(
             (axis, angle)
         })
         .collect();
+    println!("Extracted {} rotations.", rotations.len());
     if optimize {
         let (new_rotations, inverse_final_clifford) = zhang_opt(rotations, nqubits);
         rotations = new_rotations;
         clifford = clifford * inverse_final_clifford.adjoint();
+        println!("After optimization: {} rotations.", rotations.len());
     }
     let rotations = rotations
         .into_iter()
