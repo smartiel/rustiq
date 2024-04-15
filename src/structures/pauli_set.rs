@@ -251,6 +251,15 @@ impl PauliSet {
         }
         output
     }
+    pub fn get_i_factors_single_col(&self, col: usize) -> u8 {
+        let mut ifact: u8 = 0;
+        for j in 0..self.n {
+            if self.get_entry(j, col) & self.get_entry(j + self.n, col) {
+                ifact += 1;
+            }
+        }
+        return ifact % 4;
+    }
     /// Get the inverse Z output of the tableau (assuming the PauliSet is a Tableau, i.e. has exactly 2n operators storing X1...Xn Z1...Zn images)
     pub fn get_inverse_z(&self, qbit: usize) -> (bool, String) {
         let mut pstring = String::new();
@@ -274,7 +283,7 @@ impl PauliSet {
                 }
             }
         }
-        return ((cy % 2 != 0), pstring);
+        return (self.get_phase(qbit + self.n), pstring);
     }
     /// Get the inverse X output of the tableau (assuming the PauliSet is a Tableau, i.e. has exactly 2n operators storing X1...Xn Z1...Zn images)
     pub fn get_inverse_x(&self, qbit: usize) -> (bool, String) {
