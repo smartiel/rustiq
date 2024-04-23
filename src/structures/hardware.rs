@@ -213,6 +213,7 @@ fn get_steiner_tree(
     let closure = build_closure_mst(&conv_paths, &terminals);
     return build_steiner_from_mst(&closure, terminals, &conv_paths);
 }
+#[derive(Debug, Clone)]
 pub struct HardwareGraph {
     pub graph: UnGraph<(), f64, u32>,
     shortest_paths: Vec<Vec<(usize, Vec<usize>)>>,
