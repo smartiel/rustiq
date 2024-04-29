@@ -145,6 +145,27 @@ impl Tableau {
         let phase = compute_phase_product_pauli(&self.logicals, &as_vec_bool);
         return (phase, string);
     }
+    pub fn get_inverse_x(&self, qbit: usize) -> (bool, String) {
+        let (_, string) = self.logicals.get_inverse_x(qbit);
+        let mut as_vec_bool = vec![false; 2 * self.logicals.n];
+        for qbit in 0..self.logicals.n {
+            match string.chars().nth(qbit).unwrap() {
+                'X' => {
+                    as_vec_bool[qbit] = true;
+                }
+                'Y' => {
+                    as_vec_bool[qbit] = true;
+                    as_vec_bool[qbit + self.logicals.n] = true;
+                }
+                'Z' => {
+                    as_vec_bool[qbit + self.logicals.n] = true;
+                }
+                _ => {}
+            }
+        }
+        let phase = compute_phase_product_pauli(&self.logicals, &as_vec_bool);
+        return (phase, string);
+    }
     /// Lifts the Taleau into an IsometryTableau (k = 0)
     pub fn to_isometry(self) -> IsometryTableau {
         IsometryTableau {

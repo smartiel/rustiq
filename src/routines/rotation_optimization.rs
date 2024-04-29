@@ -137,6 +137,7 @@ struct MarkedPauliDag {
     marked: HashSet<usize>,
     output_pauli_set: PauliSet,
     output_rotations: Vec<usize>,
+    did_something: bool,
 }
 
 impl MarkedPauliDag {
@@ -149,6 +150,7 @@ impl MarkedPauliDag {
             dag,
             marked: HashSet::new(),
             output_rotations: Vec::new(),
+            did_something: false,
         }
     }
 
@@ -204,6 +206,7 @@ impl MarkedPauliDag {
                     & !self.pauli_set.get_entry(qbit, rotation_index)
                 {
                     self.pauli_set.set_entry(rotation_index, qbit, false, false);
+                    self.did_something = true;
                 }
             }
         }
@@ -212,7 +215,6 @@ impl MarkedPauliDag {
         if let Some(control) = self.get_unmarked_xy(rotation_index) {
             for qbit in self.pauli_set.get_support(rotation_index) {
                 if qbit == control {
-                    piece.gates.push(CliffordGate::S(control));
                     continue;
                 }
                 assert!(
@@ -245,6 +247,7 @@ impl MarkedPauliDag {
                     }
                 }
                 self.pauli_set.set_entry(rotation_index, qbit, false, false);
+                self.did_something = true;
             }
             self.marked.insert(control);
         }
@@ -298,13 +301,14 @@ impl MarkedPauliDag {
         }
     }
 
-    pub fn propagate(mut self) -> (PauliSet, Tableau, Vec<usize>) {
+    pub fn propagate(mut self) -> (PauliSet, Tableau, Vec<usize>, bool) {
         while (&mut self).simplify_once() {}
         self.pop_rest();
         return (
             self.output_pauli_set,
             self.final_clifford,
             self.output_rotations,
+            self.did_something,
         );
     }
 }
@@ -318,14 +322,16 @@ pub fn full_initial_state_propagation(
     let mut final_clifford = Tableau::new(pset.n);
     loop {
         let mpdag = MarkedPauliDag::new(pset);
-        let (new_pset, clifford, new_rotations) = mpdag.propagate();
+        let (new_pset, clifford, new_rotations, carry_on) = mpdag.propagate();
         angles = new_rotations
             .into_iter()
             .map(|i| angles[i].clone())
             .collect();
         pset = new_pset;
         final_clifford = final_clifford * clifford;
-        break;
+        if !carry_on {
+            break;
+        }
     }
     let mut new_rotations = Vec::new();
     for i in 0..pset.len() {
