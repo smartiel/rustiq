@@ -6,7 +6,7 @@ use std::collections::HashSet;
 
 fn update_rot_pi2<T: PauliLike>(axis: &String, k: i32, rest: &mut T, dagger: bool) {
     let mut support: Vec<_> = (0..axis.len())
-        .filter(|i| axis.chars().nth(*i) != Some('I'))
+        .filter(|i| axis.chars().nth(*i).unwrap() != 'I')
         .collect();
     for qbit in support.iter() {
         match axis.chars().nth(*qbit).unwrap() {
@@ -21,8 +21,8 @@ fn update_rot_pi2<T: PauliLike>(axis: &String, k: i32, rest: &mut T, dagger: boo
             _ => {}
         }
     }
-    let target = support.pop().unwrap();
-    for qbit in support.iter() {
+    let target = support[0];
+    for qbit in support.iter().skip(1) {
         rest.cnot(*qbit, target);
     }
     for _ in 0..k {
@@ -32,7 +32,7 @@ fn update_rot_pi2<T: PauliLike>(axis: &String, k: i32, rest: &mut T, dagger: boo
             rest.s(target)
         }
     }
-    for qbit in support.iter() {
+    for qbit in support.iter().skip(1) {
         rest.cnot(*qbit, target);
     }
     for qbit in support.iter() {
