@@ -50,7 +50,7 @@ def convert_circuit(circuit: list) -> (list, list):
     new_circuit = []
     angles = []
     for gate in circuit:
-        if gate[0] in ["CX", "H", "S"]:
+        if gate[0] in ["CX", "CZ", "H", "S", "Sd", "X", "Z", "SqrtX", "SqrtXd"]:
             new_circuit.append(gate)
             continue
         assert gate[0] == "RZ"
