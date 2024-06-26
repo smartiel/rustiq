@@ -66,9 +66,11 @@ def pauli_network_synthesis(
     Returns:
         list: The synthesized circuit.
     """
-    return rust_pauli_network(
-        paulis, metric, preserve_order, check, nshuffles, skip_sort, fix_clifford
-    )
+    if paulis:
+        return rust_pauli_network(
+            paulis, metric, preserve_order, check, nshuffles, skip_sort, fix_clifford
+        )
+    return []
 
 
 def graph_state_synthesis(
