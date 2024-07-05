@@ -1,6 +1,6 @@
 [![Rust](https://github.com/smartiel/rustiq/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/smartiel/rustiq/actions/workflows/rust.yml)
 
-# Rustiq: A quantum circuit compiler in Rust
+# Rustiq: A python interface for quantum circuit synthesis routines
 
 This library contains implementations of various quantum circuit synthesis algorithms.
 It can handle:
@@ -26,13 +26,10 @@ pip install ./rustiq
 
 You might need to install rust first.
 
-## Building the project (Rust)
+## Underlying rust crate
 
-The project is also available as a rust crate:
+This project is essentially a python wrapper around the rustiq-core crate
 
-```bash
-cargo build --release
-```
 
 
 ## Running the synthesis algorithms

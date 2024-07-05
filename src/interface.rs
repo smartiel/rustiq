@@ -1,18 +1,18 @@
-use super::structures::{CliffordGate, GraphState, Metric, PauliSet};
-use super::synthesis::clifford::codiagonalization::{
-    codiagonalize as codiag, codiagonalize_subsetwise,
-};
-use super::synthesis::clifford::graph_state::{
-    synthesize_graph_state, synthesize_stabilizer_state,
-};
-use super::synthesis::clifford::isometry::isometry_synthesis as iso_synth;
-use super::synthesis::pauli_network::{check_circuit, greedy_pauli_network};
-use crate::routines::rotation_extraction::extract_rotations as extract_rot;
-use crate::routines::rotation_optimization::full_initial_state_propagation;
-use crate::routines::rotation_optimization::zhang_rotation_optimization as zhang_opt;
-use crate::structures::{IsometryTableau, Parameter, PauliLike, Tableau};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
+use rustiq_core::routines::rotation_extraction::extract_rotations as extract_rot;
+use rustiq_core::routines::rotation_optimization::full_initial_state_propagation;
+use rustiq_core::routines::rotation_optimization::zhang_rotation_optimization as zhang_opt;
+use rustiq_core::structures::{CliffordGate, GraphState, Metric, PauliSet};
+use rustiq_core::structures::{IsometryTableau, Parameter, PauliLike, Tableau};
+use rustiq_core::synthesis::clifford::codiagonalization::{
+    codiagonalize as codiag, codiagonalize_subsetwise,
+};
+use rustiq_core::synthesis::clifford::graph_state::{
+    synthesize_graph_state, synthesize_stabilizer_state,
+};
+use rustiq_core::synthesis::clifford::isometry::isometry_synthesis as iso_synth;
+use rustiq_core::synthesis::pauli_network::{check_circuit, greedy_pauli_network};
 
 #[pyfunction]
 /// Single interface function for the 4 greedy algorithms for Pauli network synthesis
