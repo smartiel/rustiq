@@ -1,6 +1,6 @@
 [package]
 name = "rustiq"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -11,4 +11,4 @@ pyo3 = { version = "0.18.2", features = ["extension-module"] }
 petgraph = "0.6.3"
 itertools = "0.10.5"
 rand = "0.8.5"
-rustiq-core = "0.0.1"
+rustiq-core = "0.0.5"
