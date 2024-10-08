@@ -3,8 +3,9 @@ use pyo3::wrap_pyfunction;
 use rustiq_core::routines::rotation_extraction::extract_rotations as extract_rot;
 use rustiq_core::routines::rotation_optimization::full_initial_state_propagation;
 use rustiq_core::routines::rotation_optimization::zhang_rotation_optimization as zhang_opt;
-use rustiq_core::structures::{CliffordGate, GraphState, Metric, PauliSet};
-use rustiq_core::structures::{IsometryTableau, Parameter, PauliLike, Tableau};
+use rustiq_core::structures::{CliffordGate, GraphState, PauliSet};
+use rustiq_core::structures::Metric as MetricFromCore;
+use rustiq_core::structures::{IsometryTableau, Parameter, Tableau};
 use rustiq_core::synthesis::clifford::codiagonalization::{
     codiagonalize as codiag, codiagonalize_subsetwise,
 };
@@ -13,6 +14,12 @@ use rustiq_core::synthesis::clifford::graph_state::{
 };
 use rustiq_core::synthesis::clifford::isometry::isometry_synthesis as iso_synth;
 use rustiq_core::synthesis::pauli_network::{check_circuit, greedy_pauli_network};
+
+#[derive(Clone)]
+#[pyclass]
+pub struct Metric {
+    inner: MetricFromCore,
+}
 
 #[pyfunction]
 /// Single interface function for the 4 greedy algorithms for Pauli network synthesis
@@ -29,7 +36,7 @@ pub fn pauli_network_synthesis(
     let mut bucket = PauliSet::from_slice(&operator_sequence);
     let circuit = greedy_pauli_network(
         &mut bucket,
-        &metric,
+        &metric.inner,
         preserve_order,
         nshuffles,
         skip_sort,
@@ -50,7 +57,7 @@ pub fn stabilizer_state_synthesis(
     niter: usize,
 ) -> Vec<(String, Vec<usize>)> {
     let ps = PauliSet::from_slice(&stabilizers);
-    let circuit = synthesize_stabilizer_state(&ps, &metric, niter);
+    let circuit = synthesize_stabilizer_state(&ps, &metric.inner, niter);
     circuit.gates.iter().map(|gate| gate.to_vec()).collect()
 }
 
@@ -63,7 +70,7 @@ pub fn graph_state_synthesis(
     niter: usize,
 ) -> Vec<(String, Vec<usize>)> {
     let gs = GraphState::from_adj(graph_adj);
-    let mut circuit = synthesize_graph_state(&gs, &metric, niter);
+    let mut circuit = synthesize_graph_state(&gs, &metric.inner, niter);
     for i in 0..gs.n {
         circuit.gates.push(CliffordGate::H(i));
     }
@@ -79,7 +86,7 @@ pub fn codiagonalization(
     niter: usize,
 ) -> Vec<(String, Vec<usize>)> {
     let mut pset = PauliSet::from_slice(&paulis);
-    let circuit = codiag(&mut pset, &metric, niter);
+    let circuit = codiag(&mut pset, &metric.inner, niter);
     return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
 }
 
@@ -109,7 +116,7 @@ pub fn isometry_synthesis(
         logicals,
         stabilizers,
     };
-    let circuit = iso_synth(&isometry, &metric, niter);
+    let circuit = iso_synth(&isometry, &metric.inner, niter);
     return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
 }
 
