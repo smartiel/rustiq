@@ -4,7 +4,7 @@ use rustiq_core::routines::rotation_extraction::extract_rotations as extract_rot
 use rustiq_core::routines::rotation_optimization::full_initial_state_propagation;
 use rustiq_core::routines::rotation_optimization::zhang_rotation_optimization as zhang_opt;
 use rustiq_core::structures::{CliffordGate, GraphState, Metric, PauliSet};
-use rustiq_core::structures::{IsometryTableau, Parameter, PauliLike, Tableau};
+use rustiq_core::structures::{IsometryTableau, Parameter, Tableau};
 use rustiq_core::synthesis::clifford::codiagonalization::{
     codiagonalize as codiag, codiagonalize_subsetwise,
 };
@@ -38,7 +38,7 @@ pub fn pauli_network_synthesis(
     if check {
         check_circuit(&operator_sequence, &circuit);
     }
-    return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
+    circuit.gates.iter().map(|gate| gate.to_vec()).collect()
 }
 
 #[pyfunction]
@@ -80,7 +80,7 @@ pub fn codiagonalization(
 ) -> Vec<(String, Vec<usize>)> {
     let mut pset = PauliSet::from_slice(&paulis);
     let circuit = codiag(&mut pset, &metric, niter);
-    return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
+    circuit.gates.iter().map(|gate| gate.to_vec()).collect()
 }
 
 #[pyfunction]
@@ -89,7 +89,7 @@ pub fn codiagonalization(
 pub fn codiagonalization_sswise(paulis: Vec<String>, k: usize) -> Vec<(String, Vec<usize>)> {
     let pset = PauliSet::from_slice(&paulis);
     let circuit = codiagonalize_subsetwise(&pset, k);
-    return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
+    circuit.gates.iter().map(|gate| gate.to_vec()).collect()
 }
 
 #[pyfunction]
@@ -110,8 +110,10 @@ pub fn isometry_synthesis(
         stabilizers,
     };
     let circuit = iso_synth(&isometry, &metric, niter);
-    return circuit.gates.iter().map(|gate| gate.to_vec()).collect();
+    circuit.gates.iter().map(|gate| gate.to_vec()).collect()
 }
+
+type Rotations = (Vec<(String, String)>, Vec<(bool, String)>);
 
 #[pyfunction]
 pub fn extract_rotations(
@@ -119,9 +121,9 @@ pub fn extract_rotations(
     angles: Vec<String>,
     nqubits: usize,
     optimize: bool,
-) -> (Vec<(String, String)>, Vec<(bool, String)>) {
+) -> Rotations {
     let (rotations, mut clifford) = extract_rot(&circuit, nqubits);
-    let angles = angles.into_iter().map(|s| Parameter::from_string(s));
+    let angles = angles.into_iter().map(Parameter::from_string);
     let mut rotations: Vec<_> = angles
         .zip(rotations)
         .map(|(mut angle, (phase, axis))| {
@@ -140,17 +142,14 @@ pub fn extract_rotations(
         .into_iter()
         .map(|(x, y)| (x, y.to_string()))
         .collect();
-    return (
+    (
         rotations,
         (0..2 * nqubits).map(|i| clifford.logicals.get(i)).collect(),
-    );
+    )
 }
 
 #[pyfunction]
-pub fn zhang_rotation_optimization(
-    rotations: Vec<(String, String)>,
-    nqubits: usize,
-) -> (Vec<(String, String)>, Vec<(bool, String)>) {
+pub fn zhang_rotation_optimization(rotations: Vec<(String, String)>, nqubits: usize) -> Rotations {
     let rotations = rotations
         .into_iter()
         .map(|(a, b)| (a, Parameter::from_string(b)))
@@ -161,16 +160,14 @@ pub fn zhang_rotation_optimization(
         .map(|(x, y)| (x, y.to_string()))
         .collect();
     let clifford = inverse_final_clifford.adjoint();
-    return (
+    (
         rotations,
         (0..2 * nqubits).map(|i| clifford.logicals.get(i)).collect(),
-    );
+    )
 }
 
 #[pyfunction]
-pub fn initial_state_propagation(
-    rotations: Vec<(String, String)>,
-) -> (Vec<(String, String)>, Vec<(bool, String)>) {
+pub fn initial_state_propagation(rotations: Vec<(String, String)>) -> Rotations {
     let rotations: Vec<_> = rotations
         .into_iter()
         .map(|(a, b)| (a, Parameter::from_string(b)))
@@ -180,12 +177,12 @@ pub fn initial_state_propagation(
         .into_iter()
         .map(|(x, y)| (x, y.to_string()))
         .collect();
-    return (
+    (
         rotations,
         (0..2 * final_clifford.logicals.n)
             .map(|i| final_clifford.logicals.get(i))
             .collect(),
-    );
+    )
 }
 
 #[pyfunction]
