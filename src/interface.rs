@@ -222,17 +222,17 @@ pub fn tableau_mul(t1: Vec<(bool, String)>, t2: Vec<(bool, String)>) -> Vec<(boo
 }
 
 #[pymodule]
-fn rustiq(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
-    m.add_wrapped(wrap_pyfunction!(pauli_network_synthesis))?;
-    m.add_wrapped(wrap_pyfunction!(graph_state_synthesis))?;
-    m.add_wrapped(wrap_pyfunction!(stabilizer_state_synthesis))?;
-    m.add_wrapped(wrap_pyfunction!(codiagonalization))?;
-    m.add_wrapped(wrap_pyfunction!(codiagonalization_sswise))?;
-    m.add_wrapped(wrap_pyfunction!(isometry_synthesis))?;
-    m.add_wrapped(wrap_pyfunction!(extract_rotations))?;
-    m.add_wrapped(wrap_pyfunction!(zhang_rotation_optimization))?;
-    m.add_wrapped(wrap_pyfunction!(initial_state_propagation))?;
-    m.add_wrapped(wrap_pyfunction!(tableau_mul))?;
+fn rustiq(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(pauli_network_synthesis, m)?)?;
+    m.add_function(wrap_pyfunction!(graph_state_synthesis, m)?)?;
+    m.add_function(wrap_pyfunction!(stabilizer_state_synthesis, m)?)?;
+    m.add_function(wrap_pyfunction!(codiagonalization, m)?)?;
+    m.add_function(wrap_pyfunction!(codiagonalization_sswise, m)?)?;
+    m.add_function(wrap_pyfunction!(isometry_synthesis, m)?)?;
+    m.add_function(wrap_pyfunction!(extract_rotations, m)?)?;
+    m.add_function(wrap_pyfunction!(zhang_rotation_optimization, m)?)?;
+    m.add_function(wrap_pyfunction!(initial_state_propagation, m)?)?;
+    m.add_function(wrap_pyfunction!(tableau_mul, m)?)?;
     m.add_class::<Metric>()?;
     Ok(())
 }
