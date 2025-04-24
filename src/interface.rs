@@ -20,10 +20,12 @@ pub struct Metric {
     data: RsMetric,
 }
 
+#[pymethods]
 impl Metric {
-    pub fn new(metric_type: &str) -> Self {
+    #[new]
+    pub fn new(metric_type: String) -> Self {
         Self {
-            data: match metric_type {
+            data: match metric_type.as_str() {
                 "count" => RsMetric::COUNT,
                 "depth" => RsMetric::DEPTH,
                 _ => panic!(
@@ -33,7 +35,8 @@ impl Metric {
             },
         }
     }
-
+}
+impl Metric {
     pub fn unwrap(self) -> RsMetric {
         return self.data;
     }
